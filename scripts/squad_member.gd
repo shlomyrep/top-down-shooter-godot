@@ -12,6 +12,8 @@ var player: Node2D = null
 var _target: Node2D = null
 var _shoot_timer: Timer
 var _lifetime_timer: Timer
+# Each member orbits the player at a unique offset — creates a loose formation
+var _follow_offset: Vector2 = Vector2.ZERO
 
 signal expired
 
@@ -23,6 +25,10 @@ var bullet_scene: PackedScene = preload("res://scenes/bullet.tscn")
 
 func _ready() -> void:
 	add_to_group("squad")
+	# Random offset in a ring (50–90 px) so members spread around the player
+	var angle := randf() * TAU
+	var radius := randf_range(50.0, 90.0)
+	_follow_offset = Vector2.RIGHT.rotated(angle) * radius
 
 	if shielded:
 		var hp_max := 120
@@ -49,9 +55,10 @@ func _ready() -> void:
 func _physics_process(_delta: float) -> void:
 	if not player or not is_instance_valid(player):
 		return
-	var dist := global_position.distance_to(player.global_position)
-	if dist > 120.0:
-		velocity = (player.global_position - global_position).normalized() * speed
+	var follow_pos := player.global_position + _follow_offset
+	var dist := global_position.distance_to(follow_pos)
+	if dist > 55.0:
+		velocity = (follow_pos - global_position).normalized() * speed
 	else:
 		velocity = Vector2.ZERO
 	move_and_slide()

@@ -10,8 +10,8 @@ radius = 16.0
 radius = 280.0
 
 [node name="SquadMember" type="CharacterBody2D"]
-collision_layer = 1
-collision_mask = 2
+collision_layer = 8
+collision_mask = 42
 script = ExtResource("1_squad")
 
 [node name="BodyPoly" type="Sprite2D" parent="."]
