@@ -3,7 +3,7 @@ extends Node2D
 const ARENA_WIDTH := 3200
 const ARENA_HEIGHT := 2400
 const STORY_DURATION  := 3.0
-const BUILD_DURATION  := 60.0
+const BUILD_DURATION  := 30.0
 
 @export var enemy_scene: PackedScene
 @export var spawn_interval := 2.0
@@ -162,11 +162,13 @@ func _try_place_at(cell: Vector2i) -> void:
 	if BuildManager.selected == "erase":
 		_try_erase_at(cell)
 		return
-	# Allow repairing a damaged wall (80% discount) or replacing a wall with a door
+
 	if BuildManager.is_occupied(cell):
 		var existing: Node = BuildManager.occupied_cells[cell]
-		if BuildManager.selected == "wall" and existing.get_meta("structure_type", "") == "wall":
-			if existing.hp < existing.MAX_HP:
+		var existing_type: String = existing.get_meta("structure_type", "")
+		if existing_type == BuildManager.selected:
+			# Same type — offer repair if it's a wall
+			if existing_type == "wall" and existing.hp < existing.MAX_HP:
 				var repair_cost: int = maxi(1, int(BuildManager.COSTS["wall"] * 0.20))
 				if coins < repair_cost:
 					hud.flash_build_denied()
@@ -175,21 +177,20 @@ func _try_place_at(cell: Vector2i) -> void:
 				hud.update_coins(coins)
 				existing.repair()
 			return
-		if BuildManager.selected == "door":
-			if existing.get_meta("structure_type", "") == "wall":
-				# Swap wall → door (costs the door cost, no refund for wall)
-				var cost: int = BuildManager.COSTS["door"]
-				if coins < cost:
-					hud.flash_build_denied()
-					return
-				coins -= cost
-				hud.update_coins(coins)
-				existing.queue_free()
-				BuildManager.unregister(cell)
-				var door := _create_structure("door", cell)
-				add_child(door)
-				BuildManager.register(cell, door)
+		# Different type — replace at minimum cost (new cost minus erase refund)
+		var replace_cost: int = maxi(0, BuildManager.COSTS[BuildManager.selected] - BuildManager.ERASE_REFUND)
+		if coins < replace_cost:
+			hud.flash_build_denied()
+			return
+		coins -= replace_cost
+		hud.update_coins(coins)
+		existing.queue_free()
+		BuildManager.unregister(cell)
+		var replacement := _create_structure(BuildManager.selected, cell)
+		add_child(replacement)
+		BuildManager.register(cell, replacement)
 		return
+
 	var cost: int = BuildManager.COSTS[BuildManager.selected]
 	if coins < cost:
 		hud.flash_build_denied()
@@ -234,7 +235,7 @@ func _on_spawn_timer_timeout() -> void:
 		return
 
 	var enemy: CharacterBody2D = enemy_scene.instantiate() as CharacterBody2D
-	# Find a spawn position that is not inside or on top of structures
+	# Find a spawn position that is not on/inside structures
 	var spawn_pos := Vector2.ZERO
 	var valid := false
 	for _attempt in 8:
