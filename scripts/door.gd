@@ -3,18 +3,18 @@ extends StaticBody2D
 ## Buildable door.  Closed by default — blocks movement.  toggle() flips state.
 ## The global HUD button toggles ALL nodes in group "doors" at once.
 
-const MAX_HP := 100
+const MAX_HP := 140
 var hp := MAX_HP
 var cell: Vector2i
 var is_open := false
 
 signal destroyed(cell: Vector2i)
 
-# Closed colours: green (healthy) → yellow → red (critical)
+# Closed colours: blue (healthy) → yellow → red (critical)
 const CLOSED_COLORS: Array = [
-	Color(0.82, 0.18, 0.10, 1.00),  # hp  1-33 — red
-	Color(0.88, 0.68, 0.08, 1.00),  # hp 34-66 — yellow
-	Color(0.20, 0.45, 0.88, 1.00),  # hp 67-100 — blue (full health)
+	Color(0.82, 0.18, 0.10, 1.00),  # hp   1-46 — red
+	Color(0.88, 0.68, 0.08, 1.00),  # hp  47-93 — yellow
+	Color(0.20, 0.45, 0.88, 1.00),  # hp 94-140 — blue (full health)
 ]
 const OPEN_COLOR := Color(0.20, 0.45, 0.88, 0.22)
 
@@ -43,5 +43,5 @@ func take_damage(amount: int) -> void:
 		_update_color()
 
 func _update_color() -> void:
-	var idx := clampi((hp - 1) / 34, 0, 2)
+	var idx := clampi((hp - 1) / 47, 0, 2)
 	door_body.color = CLOSED_COLORS[idx]
