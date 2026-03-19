@@ -3,7 +3,7 @@ extends Node2D
 const ARENA_WIDTH := 3200
 const ARENA_HEIGHT := 2400
 const STORY_DURATION  := 3.0
-const BUILD_DURATION  := 30.0
+const BUILD_DURATION  := 60.0
 
 @export var enemy_scene: PackedScene
 @export var spawn_interval := 2.0

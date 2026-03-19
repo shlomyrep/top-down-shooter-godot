@@ -65,6 +65,9 @@ func _physics_process(_delta: float) -> void:
 	move_and_slide()
 
 	# Aim
+	if BuildManager.build_mode:
+		body_sprite.play("idle")
+		return
 	if is_using_touch:
 		if aim_input.length() > 0.1:
 			aim_direction = aim_input.normalized()

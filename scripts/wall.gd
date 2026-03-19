@@ -2,15 +2,15 @@ extends StaticBody2D
 
 ## Buildable wall.  HP 3 with colour-coded damage states (green → yellow → red).
 
-var hp := 3
+var hp := 9
 var cell: Vector2i
 
 signal destroyed(cell: Vector2i)
 
 const HP_COLORS: Array = [
-	Color(0.82, 0.18, 0.10),  # hp 1 — red
-	Color(0.88, 0.68, 0.08),  # hp 2 — yellow
-	Color(0.28, 0.76, 0.28),  # hp 3 — green
+	Color(0.82, 0.18, 0.10),  # hp 1-3 — red
+	Color(0.88, 0.68, 0.08),  # hp 4-6 — yellow
+	Color(0.28, 0.76, 0.28),  # hp 7-9 — green
 ]
 
 @onready var wall_body   := $WallBody
@@ -22,5 +22,6 @@ func take_damage(amount: int) -> void:
 		destroyed.emit(cell)
 		queue_free()
 		return
-	wall_body.color   = HP_COLORS[hp - 1]
-	wall_border.color = HP_COLORS[hp - 1].darkened(0.45)
+	var color_idx := clampi((hp - 1) / 3, 0, 2)
+	wall_body.color   = HP_COLORS[color_idx]
+	wall_border.color = HP_COLORS[color_idx].darkened(0.45)

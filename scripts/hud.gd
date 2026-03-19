@@ -70,7 +70,7 @@ func flash_buy_denied() -> void:
 func show_build_mode() -> void:
 	build_panel.visible = true
 	_highlight_palette(wall_btn)
-	build_timer_label.text = "BUILD MODE: 30s"
+	build_timer_label.text = "BUILD MODE: 60s"
 
 func hide_build_mode() -> void:
 	build_panel.visible = false
