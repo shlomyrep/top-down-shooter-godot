@@ -1,0 +1,51 @@
+[gd_scene load_steps=8 format=3 uid="uid://main001"]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="PackedScene" uid="uid://player001" path="res://scenes/player.tscn" id="2_player"]
+[ext_resource type="PackedScene" uid="uid://enemy001" path="res://scenes/enemy.tscn" id="3_enemy"]
+[ext_resource type="PackedScene" uid="uid://hud001" path="res://scenes/hud.tscn" id="4_hud"]
+[ext_resource type="Script" path="res://scripts/arena.gd" id="5_arena"]
+
+[sub_resource type="RectangleShape2D" id="RectShapeTop"]
+size = Vector2(3280, 40)
+
+[sub_resource type="RectangleShape2D" id="RectShapeSide"]
+size = Vector2(40, 2480)
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_main")
+enemy_scene = ExtResource("3_enemy")
+
+[node name="Arena" type="Node2D" parent="."]
+script = ExtResource("5_arena")
+
+[node name="ArenaWalls" type="StaticBody2D" parent="."]
+collision_layer = 8
+collision_mask = 0
+
+[node name="WallTop" type="CollisionShape2D" parent="ArenaWalls"]
+position = Vector2(1600, -20)
+shape = SubResource("RectShapeTop")
+
+[node name="WallBottom" type="CollisionShape2D" parent="ArenaWalls"]
+position = Vector2(1600, 2420)
+shape = SubResource("RectShapeTop")
+
+[node name="WallLeft" type="CollisionShape2D" parent="ArenaWalls"]
+position = Vector2(-20, 1200)
+shape = SubResource("RectShapeSide")
+
+[node name="WallRight" type="CollisionShape2D" parent="ArenaWalls"]
+position = Vector2(3220, 1200)
+shape = SubResource("RectShapeSide")
+
+[node name="Player" parent="." instance=ExtResource("2_player")]
+position = Vector2(1600, 1200)
+
+[node name="SpawnTimer" type="Timer" parent="."]
+
+[node name="UILayer" type="CanvasLayer" parent="."]
+
+[node name="HUD" parent="UILayer" instance=ExtResource("4_hud")]
+
+[connection signal="timeout" from="SpawnTimer" to="." method="_on_spawn_timer_timeout"]

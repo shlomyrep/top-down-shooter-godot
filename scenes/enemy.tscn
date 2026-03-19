@@ -1,0 +1,52 @@
+[gd_scene load_steps=5 format=3 uid="uid://enemy001"]
+
+[ext_resource type="Script" path="res://scripts/enemy.gd" id="1_enemy"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_enemy"]
+radius = 18.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_hit"]
+radius = 22.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_health_bg"]
+bg_color = Color(0.15, 0.15, 0.15, 0.8)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[node name="Enemy" type="CharacterBody2D"]
+collision_layer = 2
+collision_mask = 5
+script = ExtResource("1_enemy")
+
+[node name="BodySprite" type="AnimatedSprite2D" parent="."]
+scale = Vector2(0.2, 0.2)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_enemy")
+
+[node name="HitArea" type="Area2D" parent="."]
+collision_layer = 2
+collision_mask = 1
+
+[node name="HitShape" type="CollisionShape2D" parent="HitArea"]
+shape = SubResource("CircleShape2D_hit")
+
+[node name="HealthBarPivot" type="Node2D" parent="."]
+position = Vector2(0, -30)
+
+[node name="HealthBar" type="ProgressBar" parent="HealthBarPivot"]
+offset_left = -20.0
+offset_top = -4.0
+offset_right = 20.0
+offset_bottom = 4.0
+theme_override_styles/background = SubResource("StyleBoxFlat_health_bg")
+max_value = 60.0
+value = 60.0
+show_percentage = false
+
+[node name="AttackCooldown" type="Timer" parent="."]
+one_shot = true
+
+[connection signal="body_entered" from="HitArea" to="." method="_on_hit_area_body_entered"]
