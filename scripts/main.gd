@@ -159,7 +159,26 @@ func _unhandled_input(event: InputEvent) -> void:
 			_try_erase_at(cell)
 
 func _try_place_at(cell: Vector2i) -> void:
-	if BuildManager.selected == "erase" or BuildManager.is_occupied(cell):
+	if BuildManager.selected == "erase":
+		_try_erase_at(cell)
+		return
+	# Allow replacing a wall with a door
+	if BuildManager.is_occupied(cell):
+		if BuildManager.selected == "door":
+			var existing: Node = BuildManager.occupied_cells[cell]
+			if existing.get_meta("structure_type", "") == "wall":
+				# Swap wall → door (costs the door cost, no refund for wall)
+				var cost: int = BuildManager.COSTS["door"]
+				if coins < cost:
+					hud.flash_build_denied()
+					return
+				coins -= cost
+				hud.update_coins(coins)
+				existing.queue_free()
+				BuildManager.unregister(cell)
+				var door := _create_structure("door", cell)
+				add_child(door)
+				BuildManager.register(cell, door)
 		return
 	var cost: int = BuildManager.COSTS[BuildManager.selected]
 	if coins < cost:
@@ -190,6 +209,7 @@ func _create_structure(type: String, cell: Vector2i) -> Node:
 		"tower": node = tower_scene.instantiate()
 	node.cell = cell
 	node.global_position = pos
+	node.set_meta("structure_type", type)
 	node.destroyed.connect(func(c: Vector2i): BuildManager.unregister(c))
 	return node
 
@@ -204,10 +224,21 @@ func _on_spawn_timer_timeout() -> void:
 		return
 
 	var enemy: CharacterBody2D = enemy_scene.instantiate() as CharacterBody2D
-	var angle: float = randf() * TAU
-	var spawn_pos: Vector2 = player.global_position + Vector2.RIGHT.rotated(angle) * spawn_distance
-	spawn_pos.x = clampf(spawn_pos.x, 60.0, float(ARENA_WIDTH - 60))
-	spawn_pos.y = clampf(spawn_pos.y, 60.0, float(ARENA_HEIGHT - 60))
+	# Find a spawn position that is not inside or on top of structures
+	var spawn_pos := Vector2.ZERO
+	var valid := false
+	for _attempt in 8:
+		var angle: float = randf() * TAU
+		var candidate: Vector2 = player.global_position + Vector2.RIGHT.rotated(angle) * spawn_distance
+		candidate.x = clampf(candidate.x, 60.0, float(ARENA_WIDTH - 60))
+		candidate.y = clampf(candidate.y, 60.0, float(ARENA_HEIGHT - 60))
+		var cell := BuildManager.world_to_cell(candidate)
+		if not BuildManager.is_occupied(cell) and not BuildManager.interior_cells.has(cell):
+			spawn_pos = candidate
+			valid = true
+			break
+	if not valid:
+		return
 
 	enemy.global_position = spawn_pos
 	enemy.player = player

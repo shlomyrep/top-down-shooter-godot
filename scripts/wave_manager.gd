@@ -5,7 +5,7 @@ extends Node
 const WAVE_CONFIGS: Array = [
 	{
 		"wave": 1,
-		"enemy_count": 25,
+		"enemy_count": 6,
 		"title": "WAVE 1",
 		"subtitle": "Enemy forces advancing on Sector 7.\nHold the line, soldier.",
 		"speed_bonus": 0.0,
@@ -13,7 +13,7 @@ const WAVE_CONFIGS: Array = [
 	},
 	{
 		"wave": 2,
-		"enemy_count": 30,
+		"enemy_count": 14,
 		"title": "WAVE 2",
 		"subtitle": "Reinforcements confirmed inbound.\nThey are getting organized. Stay sharp.",
 		"speed_bonus": 8.0,

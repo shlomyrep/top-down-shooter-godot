@@ -1,6 +1,6 @@
 extends Area2D
 
-@export var value := 10
+@export var value := 100
 
 signal collected(amount: int)
 
