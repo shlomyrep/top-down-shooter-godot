@@ -18,10 +18,17 @@ extends Control
 @onready var tower_btn         := $BuildPanel/VBox/Palette/TowerBtn
 @onready var erase_btn         := $BuildPanel/VBox/Palette/EraseBtn
 @onready var door_toggle_btn   := $DoorToggleBtn
+@onready var support_panel        := $SupportPanel
+@onready var airstrike_btn        := $SupportPanel/VBox/AirstrikeBtn
+@onready var squad_btn            := $SupportPanel/VBox/SquadBtn
+@onready var shield_squad_btn     := $SupportPanel/VBox/ShieldSquadBtn
 
 signal build_ready_pressed
 signal build_item_selected(item: String)
 signal door_toggle_pressed
+signal airstrike_pressed
+signal squad_pressed
+signal shield_squad_pressed
 
 var _doors_open := false
 
@@ -104,6 +111,35 @@ func _on_door_toggle_btn_pressed() -> void:
 	_doors_open = !_doors_open
 	door_toggle_btn.text = "DOORS: OPEN" if _doors_open else "DOORS: CLOSED"
 	door_toggle_pressed.emit()
+
+# ─── Support callables ────────────────────────────────────────────────────────
+
+func update_support_cooldowns(
+		cd_air: float, max_air: float,
+		cd_sq: float,  max_sq: float,
+		cd_sh: float,  max_sh: float) -> void:
+	_set_btn_cooldown(airstrike_btn,    cd_air, max_air, "AIR STRIKE\n80c")
+	_set_btn_cooldown(squad_btn,        cd_sq,  max_sq,  "SQUAD\n50c")
+	_set_btn_cooldown(shield_squad_btn, cd_sh,  max_sh,  "SHIELD SQ.\n90c")
+
+func _set_btn_cooldown(btn: Button, cd: float, max_cd: float, label: String) -> void:
+	if cd <= 0.0:
+		btn.text = label
+		btn.modulate = Color.WHITE
+		btn.disabled = false
+	else:
+		btn.text = label + "\n" + str(int(ceil(cd))) + "s"
+		btn.modulate = Color(0.45, 0.45, 0.45, 1.0)
+		btn.disabled = true
+
+func _on_airstrike_btn_pressed() -> void:
+	airstrike_pressed.emit()
+
+func _on_squad_btn_pressed() -> void:
+	squad_pressed.emit()
+
+func _on_shield_squad_btn_pressed() -> void:
+	shield_squad_pressed.emit()
 
 func update_wave(wave: int) -> void:
 	wave_label.text = "WAVE " + str(wave)

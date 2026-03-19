@@ -19,6 +19,8 @@ var buy_station_scene: PackedScene = preload("res://scenes/buy_station.tscn")
 var wall_scene:        PackedScene = preload("res://scenes/wall.tscn")
 var door_scene:        PackedScene = preload("res://scenes/door.tscn")
 var tower_scene:       PackedScene = preload("res://scenes/defense_tower.tscn")
+var airstrike_scene:   PackedScene = preload("res://scenes/airstrike.tscn")
+var squad_scene:       PackedScene = preload("res://scenes/squad_member.tscn")
 
 var score := 0
 var coins := 0
@@ -67,6 +69,10 @@ func _ready() -> void:
 	hud.build_ready_pressed.connect(_on_build_ready_pressed)
 	hud.build_item_selected.connect(_on_build_item_selected)
 	hud.door_toggle_pressed.connect(_on_door_toggle_pressed)
+	hud.airstrike_pressed.connect(_on_airstrike_pressed)
+	hud.squad_pressed.connect(_on_squad_pressed)
+	hud.shield_squad_pressed.connect(_on_shield_squad_pressed)
+	SupportManager.cooldowns_updated.connect(_on_support_cooldowns_updated)
 	_begin_wave(wave)
 
 func _place_buy_stations() -> void:
@@ -277,3 +283,53 @@ func _on_door_toggle_pressed() -> void:
 
 func _on_player_health_changed(current: int, maximum: int) -> void:
 	hud.update_health(current, maximum)
+
+# ─── Support callables ────────────────────────────────────────────────────────
+
+func _on_airstrike_pressed() -> void:
+	if not SupportManager.can_airstrike(coins):
+		return
+	coins -= SupportManager.AIRSTRIKE_COST
+	hud.update_coins(coins)
+	SupportManager.use_airstrike()
+	var strike := airstrike_scene.instantiate()
+	strike.global_position = player.global_position
+	add_child(strike)
+
+# Spawns 3 regular soldiers around the player
+func _on_squad_pressed() -> void:
+	if not SupportManager.can_squad(coins):
+		return
+	coins -= SupportManager.SQUAD_COST
+	hud.update_coins(coins)
+	SupportManager.use_squad()
+	_spawn_squad(3, false)
+
+# Spawns 2 shielded soldiers around the player
+func _on_shield_squad_pressed() -> void:
+	if not SupportManager.can_shield_squad(coins):
+		return
+	coins -= SupportManager.SHIELD_SQUAD_COST
+	hud.update_coins(coins)
+	SupportManager.use_shield_squad()
+	_spawn_squad(2, true)
+
+func _spawn_squad(count: int, shielded: bool) -> void:
+	for i in count:
+		var angle := TAU * i / count
+		var offset := Vector2.RIGHT.rotated(angle) * 70.0
+		var member := squad_scene.instantiate()
+		member.global_position = player.global_position + offset
+		member.player = player
+		member.shielded = shielded
+		add_child(member)
+
+func _on_support_cooldowns_updated() -> void:
+	hud.update_support_cooldowns(
+		SupportManager.airstrike_cd,
+		SupportManager.AIRSTRIKE_COOLDOWN,
+		SupportManager.squad_cd,
+		SupportManager.SQUAD_COOLDOWN,
+		SupportManager.shield_squad_cd,
+		SupportManager.SHIELD_SQUAD_COOLDOWN
+	)

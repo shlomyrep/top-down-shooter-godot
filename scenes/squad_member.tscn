@@ -1,0 +1,38 @@
+[gd_scene format=3 uid="uid://squad001"]
+
+[ext_resource type="Script" path="res://scripts/squad_member.gd" id="1_squad"]
+
+[sub_resource type="CircleShape2D" id="CircleShape_body"]
+radius = 16.0
+
+[sub_resource type="CircleShape2D" id="CircleShape_scan"]
+radius = 280.0
+
+[node name="SquadMember" type="CharacterBody2D"]
+collision_layer = 1
+collision_mask = 2
+script = ExtResource("1_squad")
+
+[node name="BodyPoly" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-12, -12, 12, -12, 12, 12, -12, 12)
+color = Color(0.18, 0.55, 0.96, 1.0)
+
+[node name="HeadDot" type="Polygon2D" parent="BodyPoly"]
+position = Vector2(14, 0)
+polygon = PackedVector2Array(-5, -5, 5, -5, 5, 5, -5, 5)
+color = Color(0.8, 0.88, 1.0, 1.0)
+
+[node name="ShieldRing" type="Polygon2D" parent="."]
+visible = false
+polygon = PackedVector2Array(-20, -20, 20, -20, 20, 20, -20, 20)
+color = Color(0.4, 0.6, 1.0, 0.28)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape_body")
+
+[node name="ScanArea" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="ScanShape" type="CollisionShape2D" parent="ScanArea"]
+shape = SubResource("CircleShape_scan")

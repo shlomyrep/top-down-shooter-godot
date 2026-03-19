@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://hud001"]
+[gd_scene load_steps=8 format=3 uid="uid://hud001"]
 
 [ext_resource type="Script" path="res://scripts/hud.gd" id="1_hud"]
 [ext_resource type="PackedScene" uid="uid://joystick01" path="res://scenes/virtual_joystick.tscn" id="2_joystick"]
@@ -22,6 +22,13 @@ bg_color = Color(0.0, 0.0, 0.05, 0.82)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_build_bg"]
 bg_color = Color(0.04, 0.06, 0.12, 0.88)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_support_bg"]
+bg_color = Color(0.10, 0.04, 0.14, 0.88)
 corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
@@ -222,6 +229,37 @@ grow_horizontal = 0
 grow_vertical = 0
 text = "DOORS: CLOSED"
 
+[node name="SupportPanel" type="PanelContainer" parent="."]
+layout_mode = 1
+anchor_left = 0.0
+anchor_top = 0.5
+anchor_right = 0.0
+anchor_bottom = 0.5
+offset_left = 10.0
+offset_top = -80.0
+offset_right = 130.0
+offset_bottom = 120.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_support_bg")
+
+[node name="VBox" type="VBoxContainer" parent="SupportPanel"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="AirstrikeBtn" type="Button" parent="SupportPanel/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(118, 58)
+text = "AIR STRIKE\n80c"
+
+[node name="SquadBtn" type="Button" parent="SupportPanel/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(118, 58)
+text = "SQUAD\n50c"
+
+[node name="ShieldSquadBtn" type="Button" parent="SupportPanel/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(118, 58)
+text = "SHIELD SQ.\n90c"
+
 [node name="MoveJoystick" parent="." instance=ExtResource("2_joystick")]
 layout_mode = 1
 anchors_preset = 2
@@ -250,4 +288,7 @@ offset_bottom = -42.0
 [connection signal="pressed" from="BuildPanel/VBox/Palette/EraseBtn" to="." method="_on_erase_btn_pressed"]
 [connection signal="pressed" from="BuildPanel/VBox/ReadyBtn"         to="." method="_on_ready_btn_pressed"]
 [connection signal="pressed" from="DoorToggleBtn"                    to="." method="_on_door_toggle_btn_pressed"]
+[connection signal="pressed" from="SupportPanel/VBox/AirstrikeBtn"   to="." method="_on_airstrike_btn_pressed"]
+[connection signal="pressed" from="SupportPanel/VBox/SquadBtn"       to="." method="_on_squad_btn_pressed"]
+[connection signal="pressed" from="SupportPanel/VBox/ShieldSquadBtn" to="." method="_on_shield_squad_btn_pressed"]
 
