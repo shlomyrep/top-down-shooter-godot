@@ -7,6 +7,9 @@ extends CharacterBody2D
 
 var health: int
 var player: Node2D = null
+var _is_dead := false
+
+signal died_at(pos: Vector2)
 
 @onready var body_sprite: AnimatedSprite2D = $BodySprite
 @onready var health_bar := $HealthBarPivot/HealthBar
@@ -61,11 +64,15 @@ func _physics_process(_delta: float) -> void:
 		body_sprite.play("move")
 
 func take_damage(amount: int) -> void:
+	if _is_dead:
+		return
 	health -= amount
 	health_bar.value = health
 	health_bar.visible = true
 	_flash()
 	if health <= 0:
+		_is_dead = true
+		died_at.emit(global_position)
 		_spawn_death_effect()
 		queue_free()
 

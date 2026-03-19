@@ -53,6 +53,10 @@ shoot={
 ]
 }
 
+[autoload]
+
+WaveManager="*res://scripts/wave_manager.gd"
+
 [rendering]
 
 renderer/rendering_method="gl_compatibility"
