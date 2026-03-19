@@ -14,6 +14,7 @@ const BETWEEN_WAVE_DURATION := 5.0
 @onready var hud := $UILayer/HUD
 
 var coin_scene: PackedScene = preload("res://scenes/coin.tscn")
+var buy_station_scene: PackedScene = preload("res://scenes/buy_station.tscn")
 
 var score := 0
 var coins := 0
@@ -41,7 +42,47 @@ func _ready() -> void:
 	aim_joy.joystick_released.connect(_on_aim_released)
 
 	hud.update_coins(coins)
+	_place_buy_stations()
+	player.weapon_changed.connect(hud.update_weapon)
+	hud.update_weapon(WeaponManager.get_current()["name"])
 	_begin_wave(wave)
+
+func _place_buy_stations() -> void:
+	var station_data := [
+		{"weapon_id": "shotgun", "pos": Vector2(400,  300)},
+		{"weapon_id": "rifle",   "pos": Vector2(2800, 300)},
+		{"weapon_id": "lmg",    "pos": Vector2(1600, 2100)},
+	]
+	for entry in station_data:
+		var station := buy_station_scene.instantiate()
+		station.weapon_id = entry["weapon_id"]
+		station.global_position = entry["pos"]
+		var w: Dictionary = WeaponManager.WEAPONS[entry["weapon_id"]]
+		# Update the visual labels to match the exported weapon_id
+		station.get_node("NameLabel").text = w["name"].to_upper()
+		station.get_node("CostLabel").text = str(w["cost"]) + " coins"
+		station.player_entered.connect(_on_buy_station_entered)
+		station.player_exited.connect(_on_buy_station_exited)
+		station.buy_requested.connect(_on_buy_requested)
+		add_child(station)
+
+func _on_buy_station_entered(station: Node) -> void:
+	var w: Dictionary = WeaponManager.WEAPONS[station.weapon_id]
+	hud.show_buy_prompt(w["name"], w["cost"])
+
+func _on_buy_station_exited() -> void:
+	hud.hide_buy_prompt()
+
+func _on_buy_requested(weapon_id: String, cost: int) -> void:
+	if WeaponManager.current_weapon == weapon_id:
+		return  # already equipped
+	if coins < cost:
+		hud.flash_buy_denied()
+		return
+	coins -= cost
+	hud.update_coins(coins)
+	player.equip_weapon(weapon_id)
+	hud.hide_buy_prompt()
 
 func _begin_wave(wave_number: int) -> void:
 	enemies_spawned_this_wave = 0

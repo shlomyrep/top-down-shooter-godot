@@ -3,6 +3,7 @@ extends Area2D
 @export var speed := 900.0
 @export var damage := 20
 @export var lifetime := 1.5
+var hit_color := Color(1.0, 0.9, 0.3, 1.0)
 
 func _ready() -> void:
 	var timer: SceneTreeTimer = get_tree().create_timer(lifetime)
@@ -32,7 +33,7 @@ func _spawn_hit_effect() -> void:
 	mat.gravity = Vector3.ZERO
 	mat.scale_min = 2.0
 	mat.scale_max = 4.0
-	mat.color = Color(1.0, 0.9, 0.3, 1.0)
+	mat.color = hit_color
 	particles.process_material = mat
 	particles.finished.connect(particles.queue_free)
 	get_tree().current_scene.add_child(particles)

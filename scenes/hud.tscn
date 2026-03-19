@@ -119,6 +119,33 @@ horizontal_alignment = 1
 vertical_alignment = 1
 modulate = Color(1.0, 0.9, 0.2, 1.0)
 
+[node name="WeaponLabel" type="Label" parent="TopBar"]
+layout_mode = 2
+custom_minimum_size = Vector2(110, 0)
+text = "PISTOL"
+horizontal_alignment = 1
+vertical_alignment = 1
+modulate = Color(1.0, 1.0, 1.0, 1.0)
+
+[node name="BuyPromptLabel" type="Label" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -250.0
+offset_top = -70.0
+offset_right = 250.0
+offset_bottom = -42.0
+grow_horizontal = 2
+text = "[E] Buy Shotgun — 75 coins"
+theme_override_font_sizes/font_size = 22
+horizontal_alignment = 1
+modulate = Color(1.0, 1.0, 1.0, 0.0)
+mouse_filter = 2
+
 [node name="MoveJoystick" parent="." instance=ExtResource("2_joystick")]
 layout_mode = 1
 anchors_preset = 2

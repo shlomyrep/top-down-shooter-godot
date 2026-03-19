@@ -19,10 +19,12 @@ var aim_input := Vector2.ZERO
 
 signal health_changed(current: int, maximum: int)
 signal died
+signal weapon_changed(weapon_name: String)
 
 func _ready() -> void:
 	health = max_health
-	shoot_cooldown.wait_time = 0.25
+	add_to_group("player")
+	shoot_cooldown.wait_time = WeaponManager.get_current()["cooldown"]
 	_setup_animations()
 	body_sprite.animation_finished.connect(_on_animation_finished)
 
@@ -90,12 +92,24 @@ func _physics_process(_delta: float) -> void:
 			body_sprite.play("idle")
 
 func shoot() -> void:
-	var bullet: Area2D = bullet_scene.instantiate() as Area2D
-	bullet.global_position = muzzle.global_position
-	bullet.rotation = gun_pivot.rotation
-	get_tree().current_scene.add_child(bullet)
+	var w := WeaponManager.get_current()
+	for i in w["pellets"]:
+		var bullet: Area2D = bullet_scene.instantiate() as Area2D
+		bullet.global_position = muzzle.global_position
+		var spread: float = (randf() - 0.5) * float(w["spread"])
+		bullet.rotation = gun_pivot.rotation + spread
+		bullet.damage = w["damage"]
+		bullet.speed = w["bullet_speed"]
+		bullet.hit_color = w["bullet_color"]
+		get_tree().current_scene.add_child(bullet)
 	_is_shooting = true
 	body_sprite.play("shoot")
+
+func equip_weapon(weapon_id: String) -> void:
+	WeaponManager.equip(weapon_id)
+	var w := WeaponManager.get_current()
+	shoot_cooldown.wait_time = w["cooldown"]
+	weapon_changed.emit(w["name"])
 
 func take_damage(amount: int) -> void:
 	health -= amount
