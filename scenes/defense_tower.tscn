@@ -1,6 +1,8 @@
 [gd_scene format=3 uid="uid://tower001"]
 
 [ext_resource type="Script" path="res://scripts/defense_tower.gd" id="1_tower"]
+[ext_resource type="Texture2D" path="res://assets/structures/tower_base.png" id="2_tower_base"]
+[ext_resource type="Texture2D" path="res://assets/structures/tower_barrel.png" id="3_tower_barrel"]
 
 [sub_resource type="RectangleShape2D" id="RectShape_tower"]
 size = Vector2(60, 60)
@@ -13,20 +15,21 @@ collision_layer = 32
 collision_mask = 0
 script = ExtResource("1_tower")
 
-[node name="TowerBase" type="Polygon2D" parent="."]
-polygon = PackedVector2Array(-30, -30, 30, -30, 30, 30, -30, 30)
-color = Color(0.72, 0.62, 0.12, 1.0)
+[node name="TowerBase" type="Sprite2D" parent="."]
+texture = ExtResource("2_tower_base")
+scale = Vector2(0.8, 0.86)
 
 [node name="TowerTop" type="Polygon2D" parent="."]
-polygon = PackedVector2Array(-18, -18, 18, -18, 18, 18, -18, 18)
-color = Color(0.50, 0.42, 0.05, 1.0)
+polygon = PackedVector2Array(-1, -1, 1, -1, 1, 1, -1, 1)
+color = Color(0, 0, 0, 0)
 
 [node name="BarrelPivot" type="Node2D" parent="."]
 
-[node name="Barrel" type="Polygon2D" parent="BarrelPivot"]
-position = Vector2(16, 0)
-polygon = PackedVector2Array(-14, -4, 14, -4, 14, 4, -14, 4)
-color = Color(0.22, 0.68, 0.30, 1.0)
+[node name="Barrel" type="Sprite2D" parent="BarrelPivot"]
+texture = ExtResource("3_tower_barrel")
+position = Vector2(25, 0)
+rotation_degrees = -90.0
+scale = Vector2(1.0, 1.0)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("RectShape_tower")

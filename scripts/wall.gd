@@ -14,8 +14,7 @@ const HP_COLORS: Array = [
 	Color(0.28, 0.76, 0.28),  # hp 37-55 — green
 ]
 
-@onready var wall_body   := $WallBody
-@onready var wall_border := $WallBorder
+@onready var wall_body := $WallBody  # Sprite2D — tinted via modulate
 
 func take_damage(amount: int) -> void:
 	hp -= amount
@@ -24,10 +23,8 @@ func take_damage(amount: int) -> void:
 		queue_free()
 		return
 	var color_idx := clampi((hp - 1) / 18, 0, 2)
-	wall_body.color   = HP_COLORS[color_idx]
-	wall_border.color = HP_COLORS[color_idx].darkened(0.45)
+	wall_body.modulate = HP_COLORS[color_idx]
 
 func repair() -> void:
 	hp = MAX_HP
-	wall_body.color   = HP_COLORS[2]
-	wall_border.color = HP_COLORS[2].darkened(0.45)
+	wall_body.modulate = HP_COLORS[2]

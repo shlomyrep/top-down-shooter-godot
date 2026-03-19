@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://wall001"]
 
 [ext_resource type="Script" path="res://scripts/wall.gd" id="1_wall"]
+[ext_resource type="Texture2D" path="res://assets/structures/sandbag_wall.png" id="2_wall_tex"]
 
 [sub_resource type="RectangleShape2D" id="RectShape_wall"]
 size = Vector2(76, 76)
@@ -10,13 +11,13 @@ collision_layer = 32
 collision_mask = 0
 script = ExtResource("1_wall")
 
-[node name="WallBody" type="Polygon2D" parent="."]
-polygon = PackedVector2Array(-38, -38, 38, -38, 38, 38, -38, 38)
-color = Color(0.28, 0.76, 0.28, 1.0)
+[node name="WallBody" type="Sprite2D" parent="."]
+texture = ExtResource("2_wall_tex")
+scale = Vector2(1.15, 1.73)
 
 [node name="WallBorder" type="Polygon2D" parent="."]
-polygon = PackedVector2Array(-38, -38, 38, -38, 38, 38, -38, 38)
-color = Color(0.08, 0.34, 0.08, 1.0)
+poly = PackedVector2Array(-38, -38, 38, -38, 38, 38, -38, 38)
+color = Color(0.08, 0.34, 0.08, 0.0)
 z_index = -1
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]

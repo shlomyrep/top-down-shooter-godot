@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://squad001"]
 
 [ext_resource type="Script" path="res://scripts/squad_member.gd" id="1_squad"]
+[ext_resource type="Texture2D" path="res://assets/squad/soldier1_gun.png" id="2_squad_tex"]
 
 [sub_resource type="CircleShape2D" id="CircleShape_body"]
 radius = 16.0
@@ -13,14 +14,8 @@ collision_layer = 1
 collision_mask = 2
 script = ExtResource("1_squad")
 
-[node name="BodyPoly" type="Polygon2D" parent="."]
-polygon = PackedVector2Array(-12, -12, 12, -12, 12, 12, -12, 12)
-color = Color(0.18, 0.55, 0.96, 1.0)
-
-[node name="HeadDot" type="Polygon2D" parent="BodyPoly"]
-position = Vector2(14, 0)
-polygon = PackedVector2Array(-5, -5, 5, -5, 5, 5, -5, 5)
-color = Color(0.8, 0.88, 1.0, 1.0)
+[node name="BodyPoly" type="Sprite2D" parent="."]
+texture = ExtResource("2_squad_tex")
 
 [node name="ShieldRing" type="Polygon2D" parent="."]
 visible = false
