@@ -8,6 +8,10 @@ extends CharacterBody2D
 var health: int
 var player: Node2D = null
 var _is_dead := false
+var _knockback_velocity := Vector2.ZERO
+
+const KNOCKBACK_FORCE   := 340.0
+const KNOCKBACK_DECAY   := 12.0
 
 signal died_at(pos: Vector2)
 
@@ -48,11 +52,13 @@ func _setup_animations() -> void:
 	body_sprite.sprite_frames = frames
 	body_sprite.play("idle")
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	if not player or not is_instance_valid(player):
 		return
 	var direction: Vector2 = (player.global_position - global_position).normalized()
-	velocity = direction * speed
+	# Blend knockback into normal movement velocity
+	_knockback_velocity = _knockback_velocity.lerp(Vector2.ZERO, KNOCKBACK_DECAY * delta)
+	velocity = direction * speed + _knockback_velocity
 	move_and_slide()
 
 	# Face movement direction but keep health bar upright
@@ -106,3 +112,6 @@ func _on_hit_area_body_entered(body: Node2D) -> void:
 		body.take_damage(damage)
 		attack_cooldown.start()
 		body_sprite.play("attack")
+		# Knockback: push enemy away from whatever it just hit
+		var push_dir: Vector2 = (global_position - body.global_position).normalized()
+		_knockback_velocity = push_dir * KNOCKBACK_FORCE
