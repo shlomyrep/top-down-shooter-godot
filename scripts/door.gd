@@ -3,7 +3,7 @@ extends StaticBody2D
 ## Buildable door.  Closed by default — blocks movement.  toggle() flips state.
 ## The global HUD button toggles ALL nodes in group "doors" at once.
 
-var hp := 3
+var hp := 15
 var cell: Vector2i
 var is_open := false
 

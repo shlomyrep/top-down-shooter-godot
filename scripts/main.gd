@@ -162,10 +162,20 @@ func _try_place_at(cell: Vector2i) -> void:
 	if BuildManager.selected == "erase":
 		_try_erase_at(cell)
 		return
-	# Allow replacing a wall with a door
+	# Allow repairing a damaged wall (80% discount) or replacing a wall with a door
 	if BuildManager.is_occupied(cell):
+		var existing: Node = BuildManager.occupied_cells[cell]
+		if BuildManager.selected == "wall" and existing.get_meta("structure_type", "") == "wall":
+			if existing.hp < existing.MAX_HP:
+				var repair_cost: int = maxi(1, int(BuildManager.COSTS["wall"] * 0.20))
+				if coins < repair_cost:
+					hud.flash_build_denied()
+					return
+				coins -= repair_cost
+				hud.update_coins(coins)
+				existing.repair()
+			return
 		if BuildManager.selected == "door":
-			var existing: Node = BuildManager.occupied_cells[cell]
 			if existing.get_meta("structure_type", "") == "wall":
 				# Swap wall → door (costs the door cost, no refund for wall)
 				var cost: int = BuildManager.COSTS["door"]
