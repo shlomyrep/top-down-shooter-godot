@@ -2,7 +2,8 @@ extends Node2D
 
 const ARENA_WIDTH := 3200
 const ARENA_HEIGHT := 2400
-const BETWEEN_WAVE_DURATION := 5.0
+const STORY_DURATION  := 3.0
+const BUILD_DURATION  := 30.0
 
 @export var enemy_scene: PackedScene
 @export var spawn_interval := 2.0
@@ -13,8 +14,11 @@ const BETWEEN_WAVE_DURATION := 5.0
 @onready var spawn_timer := $SpawnTimer
 @onready var hud := $UILayer/HUD
 
-var coin_scene: PackedScene = preload("res://scenes/coin.tscn")
+var coin_scene:        PackedScene = preload("res://scenes/coin.tscn")
 var buy_station_scene: PackedScene = preload("res://scenes/buy_station.tscn")
+var wall_scene:        PackedScene = preload("res://scenes/wall.tscn")
+var door_scene:        PackedScene = preload("res://scenes/door.tscn")
+var tower_scene:       PackedScene = preload("res://scenes/defense_tower.tscn")
 
 var score := 0
 var coins := 0
@@ -23,12 +27,27 @@ var enemies_spawned_this_wave := 0
 var _enemies_killed_this_wave := 0
 var _wave_active := false
 var _between_wave_timer: Timer
+var _build_timer: Timer
+var _build_cursor: Polygon2D
 
 func _ready() -> void:
 	_between_wave_timer = Timer.new()
 	_between_wave_timer.one_shot = true
 	_between_wave_timer.timeout.connect(_on_between_wave_timeout)
 	add_child(_between_wave_timer)
+
+	_build_timer = Timer.new()
+	_build_timer.one_shot = true
+	_build_timer.timeout.connect(_on_build_timer_timeout)
+	add_child(_build_timer)
+
+	_build_cursor = Polygon2D.new()
+	_build_cursor.polygon = PackedVector2Array([
+		Vector2(-39, -39), Vector2(39, -39), Vector2(39, 39), Vector2(-39, 39)])
+	_build_cursor.color = Color(0.3, 1.0, 0.3, 0.45)
+	_build_cursor.visible = false
+	_build_cursor.z_index = 10
+	add_child(_build_cursor)
 
 	spawn_timer.wait_time = spawn_interval
 	player.health_changed.connect(_on_player_health_changed)
@@ -45,6 +64,9 @@ func _ready() -> void:
 	_place_buy_stations()
 	player.weapon_changed.connect(hud.update_weapon)
 	hud.update_weapon(WeaponManager.get_current()["name"])
+	hud.build_ready_pressed.connect(_on_build_ready_pressed)
+	hud.build_item_selected.connect(_on_build_item_selected)
+	hud.door_toggle_pressed.connect(_on_door_toggle_pressed)
 	_begin_wave(wave)
 
 func _place_buy_stations() -> void:
@@ -103,6 +125,67 @@ func _process(_delta: float) -> void:
 		hud.update_score(score)
 	if not _wave_active and not _between_wave_timer.is_stopped():
 		hud.update_countdown(int(ceil(_between_wave_timer.time_left)))
+	if BuildManager.build_mode:
+		if not _build_timer.is_stopped():
+			hud.update_build_timer(int(ceil(_build_timer.time_left)))
+		_update_build_cursor()
+
+func _update_build_cursor() -> void:
+	var world_pos := get_global_mouse_position()
+	var cell := BuildManager.world_to_cell(world_pos)
+	_build_cursor.global_position = BuildManager.cell_to_world(cell)
+	if BuildManager.selected == "erase":
+		_build_cursor.color = Color(1.0, 0.2, 0.2, 0.5) if BuildManager.is_occupied(cell) \
+							  else Color(0.5, 0.5, 0.5, 0.2)
+	else:
+		_build_cursor.color = Color(0.3, 1.0, 0.3, 0.45) if not BuildManager.is_occupied(cell) \
+							  else Color(1.0, 0.2, 0.2, 0.45)
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not BuildManager.build_mode:
+		return
+	if event is InputEventMouseButton and event.pressed:
+		var world_pos := get_global_mouse_position()
+		var cell := BuildManager.world_to_cell(world_pos)
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			_try_place_at(cell)
+		elif event.button_index == MOUSE_BUTTON_RIGHT:
+			_try_erase_at(cell)
+
+func _try_place_at(cell: Vector2i) -> void:
+	if BuildManager.selected == "erase" or BuildManager.is_occupied(cell):
+		return
+	var cost: int = BuildManager.COSTS[BuildManager.selected]
+	if coins < cost:
+		hud.flash_build_denied()
+		return
+	coins -= cost
+	hud.update_coins(coins)
+	var structure := _create_structure(BuildManager.selected, cell)
+	add_child(structure)
+	BuildManager.register(cell, structure)
+
+func _try_erase_at(cell: Vector2i) -> void:
+	if not BuildManager.is_occupied(cell):
+		return
+	var node: Node = BuildManager.occupied_cells[cell]
+	if node and is_instance_valid(node):
+		node.queue_free()
+	coins += BuildManager.ERASE_REFUND
+	hud.update_coins(coins)
+	BuildManager.unregister(cell)
+
+func _create_structure(type: String, cell: Vector2i) -> Node:
+	var pos := BuildManager.cell_to_world(cell)
+	var node: Node
+	match type:
+		"wall":  node = wall_scene.instantiate()
+		"door":  node = door_scene.instantiate()
+		"tower": node = tower_scene.instantiate()
+	node.cell = cell
+	node.global_position = pos
+	node.destroyed.connect(func(c: Vector2i): BuildManager.unregister(c))
+	return node
 
 func _on_spawn_timer_timeout() -> void:
 	if not _wave_active or not player:
@@ -158,14 +241,39 @@ func _start_between_wave() -> void:
 	spawn_timer.stop()
 	var config := WaveManager.get_wave_config(wave)
 	hud.show_wave_transition(config)
-	_between_wave_timer.start(BETWEEN_WAVE_DURATION)
+	_between_wave_timer.start(STORY_DURATION)
 
 func _on_between_wave_timeout() -> void:
+	hud.hide_wave_transition()
+	hud.show_build_mode()
+	BuildManager.start_build_mode()
+	_build_cursor.visible = true
+	_build_timer.start(BUILD_DURATION)
+
+func _on_build_timer_timeout() -> void:
+	_end_build_phase()
+
+func _end_build_phase() -> void:
+	if not BuildManager.build_mode:
+		return
+	BuildManager.end_build_mode()
+	_build_cursor.visible = false
+	hud.hide_build_mode()
+	_build_timer.stop()
 	wave += 1
 	spawn_interval = maxf(0.5, spawn_interval - 0.15)
 	spawn_timer.wait_time = spawn_interval
-	hud.hide_wave_transition()
 	_begin_wave(wave)
+
+func _on_build_ready_pressed() -> void:
+	_end_build_phase()
+
+func _on_build_item_selected(item: String) -> void:
+	BuildManager.selected = item
+
+func _on_door_toggle_pressed() -> void:
+	for door in get_tree().get_nodes_in_group("doors"):
+		door.toggle()
 
 func _on_player_health_changed(current: int, maximum: int) -> void:
 	hud.update_health(current, maximum)

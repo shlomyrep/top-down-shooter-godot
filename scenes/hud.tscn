@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3 uid="uid://hud001"]
+[gd_scene load_steps=7 format=3 uid="uid://hud001"]
 
 [ext_resource type="Script" path="res://scripts/hud.gd" id="1_hud"]
 [ext_resource type="PackedScene" uid="uid://joystick01" path="res://scenes/virtual_joystick.tscn" id="2_joystick"]
@@ -19,6 +19,13 @@ corner_radius_bottom_left = 4
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_transition_bg"]
 bg_color = Color(0.0, 0.0, 0.05, 0.82)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_build_bg"]
+bg_color = Color(0.04, 0.06, 0.12, 0.88)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
 
 [node name="HUD" type="Control"]
 layout_mode = 3
@@ -146,6 +153,75 @@ horizontal_alignment = 1
 modulate = Color(1.0, 1.0, 1.0, 0.0)
 mouse_filter = 2
 
+[node name="BuildPanel" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -230.0
+offset_top = -148.0
+offset_right = 230.0
+offset_bottom = -8.0
+grow_horizontal = 2
+mouse_filter = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_build_bg")
+
+[node name="VBox" type="VBoxContainer" parent="BuildPanel"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="BuildTimerLabel" type="Label" parent="BuildPanel/VBox"]
+layout_mode = 2
+text = "BUILD MODE: 30s"
+theme_override_font_sizes/font_size = 17
+horizontal_alignment = 1
+modulate = Color(0.38, 1.0, 0.38, 1.0)
+
+[node name="Palette" type="HBoxContainer" parent="BuildPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="WallBtn" type="Button" parent="BuildPanel/VBox/Palette"]
+layout_mode = 2
+custom_minimum_size = Vector2(108, 46)
+text = "WALL\n20c"
+
+[node name="DoorBtn" type="Button" parent="BuildPanel/VBox/Palette"]
+layout_mode = 2
+custom_minimum_size = Vector2(108, 46)
+text = "DOOR\n20c"
+
+[node name="TowerBtn" type="Button" parent="BuildPanel/VBox/Palette"]
+layout_mode = 2
+custom_minimum_size = Vector2(108, 46)
+text = "TOWER\n60c"
+
+[node name="EraseBtn" type="Button" parent="BuildPanel/VBox/Palette"]
+layout_mode = 2
+custom_minimum_size = Vector2(108, 46)
+text = "ERASE\n+10c"
+
+[node name="ReadyBtn" type="Button" parent="BuildPanel/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 38)
+text = "READY!"
+
+[node name="DoorToggleBtn" type="Button" parent="."]
+layout_mode = 1
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -170.0
+offset_top = -52.0
+offset_right = -8.0
+offset_bottom = -8.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "DOORS: CLOSED"
+
 [node name="MoveJoystick" parent="." instance=ExtResource("2_joystick")]
 layout_mode = 1
 anchors_preset = 2
@@ -167,4 +243,11 @@ offset_left = -168.0
 offset_top = -170.0
 offset_right = -40.0
 offset_bottom = -42.0
+
+[connection signal="pressed" from="BuildPanel/VBox/Palette/WallBtn"  to="." method="_on_wall_btn_pressed"]
+[connection signal="pressed" from="BuildPanel/VBox/Palette/DoorBtn"  to="." method="_on_door_btn_pressed"]
+[connection signal="pressed" from="BuildPanel/VBox/Palette/TowerBtn" to="." method="_on_tower_btn_pressed"]
+[connection signal="pressed" from="BuildPanel/VBox/Palette/EraseBtn" to="." method="_on_erase_btn_pressed"]
+[connection signal="pressed" from="BuildPanel/VBox/ReadyBtn"         to="." method="_on_ready_btn_pressed"]
+[connection signal="pressed" from="DoorToggleBtn"                    to="." method="_on_door_toggle_btn_pressed"]
 

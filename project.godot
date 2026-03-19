@@ -62,6 +62,7 @@ interact={
 
 WaveManager="*res://scripts/wave_manager.gd"
 WeaponManager="*res://scripts/weapon_manager.gd"
+BuildManager="*res://scripts/build_manager.gd"
 
 [rendering]
 

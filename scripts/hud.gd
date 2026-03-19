@@ -11,6 +11,19 @@ extends Control
 @onready var story_label := $WaveTransitionPanel/CenterContainer/VBox/StoryLabel
 @onready var countdown_label := $WaveTransitionPanel/CenterContainer/VBox/CountdownLabel
 @onready var buy_prompt_label := $BuyPromptLabel
+@onready var build_panel       := $BuildPanel
+@onready var build_timer_label := $BuildPanel/VBox/BuildTimerLabel
+@onready var wall_btn          := $BuildPanel/VBox/Palette/WallBtn
+@onready var door_btn          := $BuildPanel/VBox/Palette/DoorBtn
+@onready var tower_btn         := $BuildPanel/VBox/Palette/TowerBtn
+@onready var erase_btn         := $BuildPanel/VBox/Palette/EraseBtn
+@onready var door_toggle_btn   := $DoorToggleBtn
+
+signal build_ready_pressed
+signal build_item_selected(item: String)
+signal door_toggle_pressed
+
+var _doors_open := false
 
 func update_health(current: int, maximum: int) -> void:
 	health_bar.value = float(current) / float(maximum) * 100.0
@@ -44,6 +57,53 @@ func flash_buy_denied() -> void:
 	buy_prompt_label.modulate = Color(1.0, 0.2, 0.2, 1.0)
 	var tween := create_tween()
 	tween.tween_property(buy_prompt_label, "modulate", Color.WHITE, 0.4)
+
+# ─── Build mode ──────────────────────────────────────────────────────────────
+
+func show_build_mode() -> void:
+	build_panel.visible = true
+	_highlight_palette(wall_btn)
+	build_timer_label.text = "BUILD MODE: 30s"
+
+func hide_build_mode() -> void:
+	build_panel.visible = false
+
+func update_build_timer(seconds: int) -> void:
+	build_timer_label.text = "BUILD MODE: " + str(seconds) + "s"
+
+func flash_build_denied() -> void:
+	build_timer_label.modulate = Color(1.0, 0.2, 0.2, 1.0)
+	var tween := create_tween()
+	tween.tween_property(build_timer_label, "modulate", Color.WHITE, 0.4)
+
+func _highlight_palette(active: Button) -> void:
+	for btn in [wall_btn, door_btn, tower_btn, erase_btn]:
+		btn.modulate = Color(0.55, 0.55, 0.55, 1.0)
+	active.modulate = Color(1.0, 1.0, 1.0, 1.0)
+
+func _on_wall_btn_pressed() -> void:
+	build_item_selected.emit("wall")
+	_highlight_palette(wall_btn)
+
+func _on_door_btn_pressed() -> void:
+	build_item_selected.emit("door")
+	_highlight_palette(door_btn)
+
+func _on_tower_btn_pressed() -> void:
+	build_item_selected.emit("tower")
+	_highlight_palette(tower_btn)
+
+func _on_erase_btn_pressed() -> void:
+	build_item_selected.emit("erase")
+	_highlight_palette(erase_btn)
+
+func _on_ready_btn_pressed() -> void:
+	build_ready_pressed.emit()
+
+func _on_door_toggle_btn_pressed() -> void:
+	_doors_open = !_doors_open
+	door_toggle_btn.text = "DOORS: OPEN" if _doors_open else "DOORS: CLOSED"
+	door_toggle_pressed.emit()
 
 func update_wave(wave: int) -> void:
 	wave_label.text = "WAVE " + str(wave)

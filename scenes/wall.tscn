@@ -1,0 +1,23 @@
+[gd_scene load_steps=3 format=3 uid="uid://wall001"]
+
+[ext_resource type="Script" path="res://scripts/wall.gd" id="1_wall"]
+
+[sub_resource type="RectangleShape2D" id="RectShape_wall"]
+size = Vector2(76, 76)
+
+[node name="Wall" type="StaticBody2D"]
+collision_layer = 32
+collision_mask = 0
+script = ExtResource("1_wall")
+
+[node name="WallBody" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-38, -38, 38, -38, 38, 38, -38, 38)
+color = Color(0.28, 0.76, 0.28, 1.0)
+
+[node name="WallBorder" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-38, -38, 38, -38, 38, 38, -38, 38)
+color = Color(0.08, 0.34, 0.08, 1.0)
+z_index = -1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectShape_wall")
