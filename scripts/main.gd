@@ -296,7 +296,9 @@ func _on_between_wave_timeout() -> void:
 	hud.show_build_mode()
 	BuildManager.start_build_mode()
 	_build_cursor.visible = true
-	_build_timer.start(BUILD_DURATION)
+	# More time per wave: base 30 s + 5 s for each completed wave
+	var scaled_build := BUILD_DURATION + float(wave) * 5.0
+	_build_timer.start(scaled_build)
 
 func _on_build_timer_timeout() -> void:
 	_end_build_phase()

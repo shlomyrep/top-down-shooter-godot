@@ -16,6 +16,9 @@ const HP_COLORS: Array = [
 
 @onready var wall_body := $WallBody  # Sprite2D — tinted via modulate
 
+func _ready() -> void:
+	wall_body.modulate = Color.WHITE
+
 func take_damage(amount: int) -> void:
 	hp -= amount
 	if hp <= 0:
@@ -27,4 +30,4 @@ func take_damage(amount: int) -> void:
 
 func repair() -> void:
 	hp = MAX_HP
-	wall_body.modulate = HP_COLORS[2]
+	wall_body.modulate = Color.WHITE
