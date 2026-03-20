@@ -11,19 +11,23 @@ extends Control
 @onready var story_label := $WaveTransitionPanel/CenterContainer/VBox/StoryLabel
 @onready var countdown_label := $WaveTransitionPanel/CenterContainer/VBox/CountdownLabel
 @onready var buy_prompt_label := $BuyPromptLabel
+@onready var buy_btn          := $BuyBtn
 @onready var build_panel       := $BuildPanel
 @onready var build_timer_label := $BuildPanel/VBox/BuildTimerLabel
 @onready var wall_btn          := $BuildPanel/VBox/Palette/WallBtn
 @onready var door_btn          := $BuildPanel/VBox/Palette/DoorBtn
 @onready var tower_btn         := $BuildPanel/VBox/Palette/TowerBtn
 @onready var erase_btn         := $BuildPanel/VBox/Palette/EraseBtn
+@onready var place_btn         := $BuildPanel/VBox/PlaceBtn
 @onready var door_toggle_btn   := $DoorToggleBtn
 @onready var support_panel        := $SupportPanel
 @onready var airstrike_btn        := $SupportPanel/VBox/AirstrikeBtn
 @onready var squad_btn            := $SupportPanel/VBox/SquadBtn
 @onready var shield_squad_btn     := $SupportPanel/VBox/ShieldSquadBtn
 
+signal buy_pressed
 signal build_ready_pressed
+signal build_place_pressed
 signal build_item_selected(item: String)
 signal door_toggle_pressed
 signal airstrike_pressed
@@ -49,21 +53,36 @@ func update_weapon(weapon_name: String) -> void:
 	tween.tween_property(weapon_label, "modulate", Color.WHITE, 0.6)
 
 func show_buy_prompt(weapon_name: String, cost: int) -> void:
-	buy_prompt_label.text = "[E] Buy " + weapon_name + " — " + str(cost) + " coins"
+	buy_prompt_label.text = "Buy " + weapon_name + " — " + str(cost) + " coins  [E]"
 	buy_prompt_label.modulate = Color(1, 1, 1, 0)
 	buy_prompt_label.visible = true
+	buy_btn.visible = true
+	buy_btn.modulate = Color(1, 1, 1, 0)
 	var tween := create_tween()
+	tween.set_parallel(true)
 	tween.tween_property(buy_prompt_label, "modulate", Color.WHITE, 0.25)
+	tween.tween_property(buy_btn, "modulate", Color.WHITE, 0.25)
 
 func hide_buy_prompt() -> void:
 	var tween := create_tween()
+	tween.set_parallel(true)
 	tween.tween_property(buy_prompt_label, "modulate", Color(1, 1, 1, 0), 0.2)
-	tween.tween_callback(buy_prompt_label.hide)
+	tween.tween_property(buy_btn, "modulate", Color(1, 1, 1, 0), 0.2)
+	tween.chain().tween_callback(func():
+		buy_prompt_label.hide()
+		buy_btn.hide()
+	)
 
 func flash_buy_denied() -> void:
 	buy_prompt_label.modulate = Color(1.0, 0.2, 0.2, 1.0)
+	buy_btn.modulate = Color(1.0, 0.2, 0.2, 1.0)
 	var tween := create_tween()
+	tween.set_parallel(true)
 	tween.tween_property(buy_prompt_label, "modulate", Color.WHITE, 0.4)
+	tween.tween_property(buy_btn, "modulate", Color.WHITE, 0.4)
+
+func _on_buy_btn_pressed() -> void:
+	buy_pressed.emit()
 
 # ─── Build mode ──────────────────────────────────────────────────────────────
 
@@ -103,6 +122,9 @@ func _on_tower_btn_pressed() -> void:
 func _on_erase_btn_pressed() -> void:
 	build_item_selected.emit("erase")
 	_highlight_palette(erase_btn)
+
+func _on_place_btn_pressed() -> void:
+	build_place_pressed.emit()
 
 func _on_ready_btn_pressed() -> void:
 	build_ready_pressed.emit()

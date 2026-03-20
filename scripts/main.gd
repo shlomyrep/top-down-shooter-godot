@@ -31,6 +31,8 @@ var _wave_active := false
 var _between_wave_timer: Timer
 var _build_timer: Timer
 var _build_cursor: Polygon2D
+var _build_cursor_cell: Vector2i
+var _current_buy_station: Node = null
 
 func _ready() -> void:
 	_between_wave_timer = Timer.new()
@@ -64,9 +66,11 @@ func _ready() -> void:
 
 	hud.update_coins(coins)
 	_place_buy_stations()
+	hud.buy_pressed.connect(_on_hud_buy_pressed)
 	player.weapon_changed.connect(hud.update_weapon)
 	hud.update_weapon(WeaponManager.get_current()["name"])
 	hud.build_ready_pressed.connect(_on_build_ready_pressed)
+	hud.build_place_pressed.connect(_on_build_place_pressed)
 	hud.build_item_selected.connect(_on_build_item_selected)
 	hud.door_toggle_pressed.connect(_on_door_toggle_pressed)
 	hud.airstrike_pressed.connect(_on_airstrike_pressed)
@@ -95,11 +99,19 @@ func _place_buy_stations() -> void:
 		add_child(station)
 
 func _on_buy_station_entered(station: Node) -> void:
+	_current_buy_station = station
 	var w: Dictionary = WeaponManager.WEAPONS[station.weapon_id]
 	hud.show_buy_prompt(w["name"], w["cost"])
 
 func _on_buy_station_exited() -> void:
+	_current_buy_station = null
 	hud.hide_buy_prompt()
+
+func _on_hud_buy_pressed() -> void:
+	if _current_buy_station == null:
+		return
+	var w: Dictionary = WeaponManager.WEAPONS[_current_buy_station.weapon_id]
+	_on_buy_requested(_current_buy_station.weapon_id, w["cost"])
 
 func _on_buy_requested(weapon_id: String, cost: int) -> void:
 	if WeaponManager.current_weapon == weapon_id:
@@ -137,8 +149,13 @@ func _process(_delta: float) -> void:
 		_update_build_cursor()
 
 func _update_build_cursor() -> void:
-	var world_pos := get_global_mouse_position()
+	var world_pos: Vector2
+	if player.is_using_touch:
+		world_pos = player.global_position + player.aim_direction * float(BuildManager.TILE) * 1.5
+	else:
+		world_pos = get_global_mouse_position()
 	var cell := BuildManager.world_to_cell(world_pos)
+	_build_cursor_cell = cell
 	_build_cursor.global_position = BuildManager.cell_to_world(cell)
 	if BuildManager.selected == "erase":
 		_build_cursor.color = Color(1.0, 0.2, 0.2, 0.5) if BuildManager.is_occupied(cell) \
@@ -317,6 +334,9 @@ func _end_build_phase() -> void:
 
 func _on_build_ready_pressed() -> void:
 	_end_build_phase()
+
+func _on_build_place_pressed() -> void:
+	_try_place_at(_build_cursor_cell)
 
 func _on_build_item_selected(item: String) -> void:
 	BuildManager.selected = item

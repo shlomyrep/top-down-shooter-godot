@@ -66,6 +66,9 @@ func _physics_process(_delta: float) -> void:
 
 	# Aim
 	if BuildManager.build_mode:
+		# Still update aim direction so the touch build cursor follows the joystick
+		if is_using_touch and aim_input.length() > 0.1:
+			aim_direction = aim_input.normalized()
 		body_sprite.play("idle")
 		return
 	if is_using_touch:

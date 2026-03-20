@@ -150,15 +150,31 @@ anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
 offset_left = -250.0
-offset_top = -70.0
+offset_top = -100.0
 offset_right = 250.0
-offset_bottom = -42.0
+offset_bottom = -72.0
 grow_horizontal = 2
-text = "[E] Buy Shotgun — 75 coins"
+text = "Buy Shotgun — 75 coins  [E]"
 theme_override_font_sizes/font_size = 22
 horizontal_alignment = 1
 modulate = Color(1.0, 1.0, 1.0, 0.0)
 mouse_filter = 2
+
+[node name="BuyBtn" type="Button" parent="."]
+visible = false
+layout_mode = 1
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -130.0
+offset_top = -66.0
+offset_right = 130.0
+offset_bottom = -8.0
+grow_horizontal = 2
+text = "BUY"
+theme_override_font_sizes/font_size = 24
+modulate = Color(0.2, 1.0, 0.4, 0.0)
 
 [node name="BuildPanel" type="PanelContainer" parent="."]
 visible = false
@@ -168,7 +184,7 @@ anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
 offset_left = -230.0
-offset_top = -148.0
+offset_top = -210.0
 offset_right = 230.0
 offset_bottom = -8.0
 grow_horizontal = 2
@@ -209,6 +225,12 @@ text = "TOWER\n60c"
 layout_mode = 2
 custom_minimum_size = Vector2(108, 46)
 text = "ERASE\n+10c"
+
+[node name="PlaceBtn" type="Button" parent="BuildPanel/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 42)
+text = "v PLACE HERE"
+modulate = Color(0.3, 1.0, 0.5, 1.0)
 
 [node name="ReadyBtn" type="Button" parent="BuildPanel/VBox"]
 layout_mode = 2
@@ -286,6 +308,8 @@ offset_bottom = -42.0
 [connection signal="pressed" from="BuildPanel/VBox/Palette/DoorBtn"  to="." method="_on_door_btn_pressed"]
 [connection signal="pressed" from="BuildPanel/VBox/Palette/TowerBtn" to="." method="_on_tower_btn_pressed"]
 [connection signal="pressed" from="BuildPanel/VBox/Palette/EraseBtn" to="." method="_on_erase_btn_pressed"]
+[connection signal="pressed" from="BuyBtn"                           to="." method="_on_buy_btn_pressed"]
+[connection signal="pressed" from="BuildPanel/VBox/PlaceBtn"         to="." method="_on_place_btn_pressed"]
 [connection signal="pressed" from="BuildPanel/VBox/ReadyBtn"         to="." method="_on_ready_btn_pressed"]
 [connection signal="pressed" from="DoorToggleBtn"                    to="." method="_on_door_toggle_btn_pressed"]
 [connection signal="pressed" from="SupportPanel/VBox/AirstrikeBtn"   to="." method="_on_airstrike_btn_pressed"]
