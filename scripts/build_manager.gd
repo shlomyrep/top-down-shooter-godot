@@ -16,6 +16,13 @@ const COSTS: Dictionary = {
 # Partial refund when erasing a structure
 const ERASE_REFUND := 10
 
+# Camp template sizes: name → outer square side length
+const TEMPLATES: Dictionary = {
+	"small":  {"size": 5},
+	"medium": {"size": 7},
+	"large":  {"size": 9},
+}
+
 var build_mode := false
 var selected  := "wall"   # "wall" | "door" | "tower" | "erase"
 
@@ -23,6 +30,8 @@ var selected  := "wall"   # "wall" | "door" | "tower" | "erase"
 var occupied_cells: Dictionary = {}
 # Cells enclosed by structures — enemies must not spawn here
 var interior_cells: Dictionary = {}
+# Cells permanently reserved by game objects (e.g. shops) — never buildable
+var reserved_cells: Dictionary = {}
 
 signal build_mode_started
 signal build_mode_ended
@@ -39,6 +48,15 @@ func cell_to_world(cell: Vector2i) -> Vector2:
 
 func is_occupied(cell: Vector2i) -> bool:
 	return occupied_cells.has(cell)
+
+func is_reserved(cell: Vector2i) -> bool:
+	return reserved_cells.has(cell)
+
+func reserve_cell(cell: Vector2i) -> void:
+	reserved_cells[cell] = true
+
+func unreserve_cell(cell: Vector2i) -> void:
+	reserved_cells.erase(cell)
 
 func register(cell: Vector2i, node: Node) -> void:
 	occupied_cells[cell] = node
@@ -81,6 +99,57 @@ func _bfs_add(cell: Vector2i, visited: Dictionary, queue: Array) -> void:
 		return
 	visited[cell] = true
 	queue.append(cell)
+
+# ─── Template helpers ─────────────────────────────────────────────────────────
+
+## Returns Array of {cell: Vector2i, type: String} for the perimeter ring of a
+## square with the given odd side length centered on `center`.
+## Corner cells become "tower"; all other perimeter cells become "wall".
+## Cells outside the arena bounds are skipped.
+func get_template_cells(center: Vector2i, size: int) -> Array:
+	var half: int = size / 2
+	var origin := Vector2i(center.x - half, center.y - half)
+	var result: Array = []
+	for dy in size:
+		for dx in size:
+			var on_edge := (dx == 0 or dx == size - 1 or dy == 0 or dy == size - 1)
+			if not on_edge:
+				continue
+			var cell := Vector2i(origin.x + dx, origin.y + dy)
+			if cell.x < 0 or cell.x >= ARENA_COLS or cell.y < 0 or cell.y >= ARENA_ROWS:
+				continue
+			var is_corner := (dx == 0 or dx == size - 1) and (dy == 0 or dy == size - 1)
+			result.append({"cell": cell, "type": "tower" if is_corner else "wall"})
+	return result
+
+## Sum the cost of all unoccupied cells in a template cell list.
+func calculate_template_cost(cells: Array) -> int:
+	var total := 0
+	for entry in cells:
+		if not is_occupied(entry.cell):
+			total += COSTS[entry.type]
+	return total
+
+## Total repair cost for every damaged wall currently on the grid (20% per wall, min 1c).
+func calculate_repair_all_cost() -> int:
+	var repair_cost := maxi(1, int(COSTS["wall"] * 0.20))
+	var total := 0
+	for cell in occupied_cells:
+		var node = occupied_cells[cell]
+		if is_instance_valid(node) and node.get_meta("structure_type", "") == "wall":
+			if node.hp < node.MAX_HP:
+				total += repair_cost
+	return total
+
+## Returns all wall nodes currently below full HP.
+func get_damaged_walls() -> Array:
+	var result: Array = []
+	for cell in occupied_cells:
+		var node = occupied_cells[cell]
+		if is_instance_valid(node) and node.get_meta("structure_type", "") == "wall":
+			if node.hp < node.MAX_HP:
+				result.append(node)
+	return result
 
 # ─── Mode control ─────────────────────────────────────────────────────────────
 

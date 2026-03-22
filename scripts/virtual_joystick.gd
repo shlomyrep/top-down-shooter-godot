@@ -1,54 +1,29 @@
 extends Control
 
-## Virtual joystick for mobile touch controls (Brawl Stars style)
-
-signal joystick_input(direction: Vector2)
-signal joystick_released
+## Virtual joystick — visual only.  Touch input is handled by main.gd.
 
 @export var joystick_radius := 64.0
-@export var dead_zone := 10.0
-
-var is_pressed := false
-var touch_index := -1
-var joystick_center := Vector2.ZERO
 
 @onready var base := $Base
 @onready var knob := $Base/Knob
 
+@export var knob_color := Color(0.9, 0.9, 0.9, 0.5)
+
 func _ready() -> void:
-	joystick_center = base.size / 2.0
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	base.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	knob.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := StyleBoxFlat.new()
+	style.bg_color = knob_color
+	for corner in ["corner_radius_top_left", "corner_radius_top_right", "corner_radius_bottom_right", "corner_radius_bottom_left"]:
+		style.set(corner, 28)
+	knob.add_theme_stylebox_override("panel", style)
 
-func _gui_input(event: InputEvent) -> void:
-	if event is InputEventScreenTouch:
-		var touch_event: InputEventScreenTouch = event as InputEventScreenTouch
-		if touch_event.pressed:
-			is_pressed = true
-			touch_index = touch_event.index
-			_update_knob(touch_event.position)
-		elif touch_event.index == touch_index:
-			_reset()
-	elif event is InputEventScreenDrag:
-		var drag_event: InputEventScreenDrag = event as InputEventScreenDrag
-		if drag_event.index == touch_index:
-			_update_knob(drag_event.position)
-
-func _update_knob(touch_pos: Vector2) -> void:
+func update_knob(direction: Vector2) -> void:
 	var center: Vector2 = base.size / 2.0
-	var direction: Vector2 = touch_pos - center
-	var distance: float = direction.length()
+	var clamped := direction * joystick_radius
+	knob.position = center + clamped - knob.size / 2.0
 
-	if distance > joystick_radius:
-		direction = direction.normalized() * joystick_radius
-
-	knob.position = center + direction - knob.size / 2.0
-
-	if distance > dead_zone:
-		joystick_input.emit(direction / joystick_radius)
-	else:
-		joystick_input.emit(Vector2.ZERO)
-
-func _reset() -> void:
-	is_pressed = false
-	touch_index = -1
-	knob.position = base.size / 2.0 - knob.size / 2.0
-	joystick_released.emit()
+func reset_knob() -> void:
+	var center: Vector2 = base.size / 2.0
+	knob.position = center - knob.size / 2.0

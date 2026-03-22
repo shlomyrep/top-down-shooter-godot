@@ -2,8 +2,22 @@
 
 [ext_resource type="Script" path="res://scripts/buy_station.gd" id="1_bs"]
 
-[sub_resource type="CircleShape2D" id="CircleShape2D_trigger"]
-radius = 130.0
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_trigger"]
+size = Vector2(80, 80)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bar_bg"]
+bg_color = Color(0.15, 0.15, 0.15, 0.85)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bar_fill"]
+bg_color = Color(0.3, 1.0, 0.4, 1.0)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
 
 [node name="BuyStation" type="Area2D"]
 collision_layer = 0
@@ -11,7 +25,7 @@ collision_mask = 1
 script = ExtResource("1_bs")
 
 [node name="TriggerZone" type="CollisionShape2D" parent="."]
-shape = SubResource("CircleShape2D_trigger")
+shape = SubResource("RectangleShape2D_trigger")
 
 [node name="StationBody" type="Polygon2D" parent="."]
 polygon = PackedVector2Array(-28, -28, 28, -28, 28, 28, -28, 28)
@@ -36,3 +50,14 @@ text = "75 coins"
 theme_override_font_sizes/font_size = 14
 horizontal_alignment = 1
 modulate = Color(1.0, 0.9, 0.2, 1.0)
+
+[node name="DwellBar" type="ProgressBar" parent="."]
+visible = false
+offset_left = -38.0
+offset_top = -52.0
+offset_right = 38.0
+offset_bottom = -40.0
+theme_override_styles/background = SubResource("StyleBoxFlat_bar_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_bar_fill")
+value = 0.0
+show_percentage = false

@@ -1,7 +1,24 @@
-[gd_scene load_steps=8 format=3 uid="uid://hud001"]
+[gd_scene load_steps=12 format=3 uid="uid://hud001"]
 
 [ext_resource type="Script" path="res://scripts/hud.gd" id="1_hud"]
 [ext_resource type="PackedScene" uid="uid://joystick01" path="res://scenes/virtual_joystick.tscn" id="2_joystick"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_shop_overlay"]
+bg_color = Color(0.0, 0.0, 0.0, 0.7)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_shop_panel"]
+bg_color = Color(0.06, 0.08, 0.14, 0.95)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_weapon_card"]
+bg_color = Color(0.1, 0.12, 0.2, 0.9)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_health_bg"]
 bg_color = Color(0.2, 0.1, 0.1, 0.8)
@@ -34,6 +51,41 @@ corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_picker_bg"]
+bg_color = Color(0.05, 0.08, 0.16, 0.95)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_countdown_bg"]
+bg_color = Color(0.12, 0.12, 0.12, 0.7)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_countdown_fill"]
+bg_color = Color(1.0, 0.72, 0.1, 1.0)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_build_timer_bg"]
+bg_color = Color(0.08, 0.18, 0.08, 0.7)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_build_timer_fill"]
+bg_color = Color(0.25, 0.95, 0.25, 1.0)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
 [node name="HUD" type="Control"]
 layout_mode = 3
 anchors_preset = 15
@@ -42,6 +94,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+layout_direction = 1
 script = ExtResource("1_hud")
 
 [node name="WaveTransitionPanel" type="PanelContainer" parent="."]
@@ -77,12 +130,14 @@ theme_override_font_sizes/font_size = 22
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="CountdownLabel" type="Label" parent="WaveTransitionPanel/CenterContainer/VBox"]
+[node name="CountdownBar" type="ProgressBar" parent="WaveTransitionPanel/CenterContainer/VBox"]
 layout_mode = 2
-text = "Next wave in: 5..."
-theme_override_font_sizes/font_size = 28
-horizontal_alignment = 1
-modulate = Color(0.7, 0.7, 0.7, 1.0)
+custom_minimum_size = Vector2(420, 22)
+theme_override_styles/background = SubResource("StyleBoxFlat_countdown_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_countdown_fill")
+max_value = 3.0
+value = 3.0
+show_percentage = false
 
 [node name="TopBar" type="HBoxContainer" parent="."]
 layout_mode = 1
@@ -90,6 +145,7 @@ offset_left = 20.0
 offset_top = 15.0
 offset_right = 750.0
 offset_bottom = 55.0
+mouse_filter = 2
 theme_override_constants/separation = 20
 
 [node name="WaveLabel" type="Label" parent="TopBar"]
@@ -133,13 +189,11 @@ horizontal_alignment = 1
 vertical_alignment = 1
 modulate = Color(1.0, 0.9, 0.2, 1.0)
 
-[node name="WeaponLabel" type="Label" parent="TopBar"]
+[node name="WeaponIcon" type="TextureRect" parent="TopBar"]
 layout_mode = 2
-custom_minimum_size = Vector2(110, 0)
-text = "PISTOL"
-horizontal_alignment = 1
-vertical_alignment = 1
-modulate = Color(1.0, 1.0, 1.0, 1.0)
+custom_minimum_size = Vector2(40, 40)
+expand_mode = 1
+stretch_mode = 5
 
 [node name="BuyPromptLabel" type="Label" parent="."]
 visible = false
@@ -188,6 +242,7 @@ offset_top = -210.0
 offset_right = 230.0
 offset_bottom = -8.0
 grow_horizontal = 2
+grow_vertical = 0
 mouse_filter = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_build_bg")
 
@@ -195,12 +250,14 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_build_bg")
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="BuildTimerLabel" type="Label" parent="BuildPanel/VBox"]
+[node name="BuildTimerBar" type="ProgressBar" parent="BuildPanel/VBox"]
 layout_mode = 2
-text = "BUILD MODE: 30s"
-theme_override_font_sizes/font_size = 17
-horizontal_alignment = 1
-modulate = Color(0.38, 1.0, 0.38, 1.0)
+custom_minimum_size = Vector2(0, 18)
+theme_override_styles/background = SubResource("StyleBoxFlat_build_timer_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_build_timer_fill")
+max_value = 30.0
+value = 30.0
+show_percentage = false
 
 [node name="Palette" type="HBoxContainer" parent="BuildPanel/VBox"]
 layout_mode = 2
@@ -208,29 +265,67 @@ theme_override_constants/separation = 5
 
 [node name="WallBtn" type="Button" parent="BuildPanel/VBox/Palette"]
 layout_mode = 2
-custom_minimum_size = Vector2(108, 46)
-text = "WALL\n20c"
+custom_minimum_size = Vector2(85, 56)
+text = "20c"
 
 [node name="DoorBtn" type="Button" parent="BuildPanel/VBox/Palette"]
 layout_mode = 2
-custom_minimum_size = Vector2(108, 46)
-text = "DOOR\n20c"
+custom_minimum_size = Vector2(85, 56)
+text = "20c"
 
 [node name="TowerBtn" type="Button" parent="BuildPanel/VBox/Palette"]
 layout_mode = 2
-custom_minimum_size = Vector2(108, 46)
-text = "TOWER\n60c"
+custom_minimum_size = Vector2(85, 56)
+text = "60c"
 
 [node name="EraseBtn" type="Button" parent="BuildPanel/VBox/Palette"]
 layout_mode = 2
-custom_minimum_size = Vector2(108, 46)
+custom_minimum_size = Vector2(85, 46)
 text = "ERASE\n+10c"
 
-[node name="PlaceBtn" type="Button" parent="BuildPanel/VBox"]
+[node name="TemplateBtn" type="Button" parent="BuildPanel/VBox/Palette"]
+layout_mode = 2
+custom_minimum_size = Vector2(85, 46)
+text = "CAMP\nTEMPLATE"
+modulate = Color(0.4, 0.9, 1.0, 1.0)
+
+[node name="TemplatePicker" type="VBoxContainer" parent="BuildPanel/VBox"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="SizeRow" type="HBoxContainer" parent="BuildPanel/VBox/TemplatePicker"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="SmallBtn" type="Button" parent="BuildPanel/VBox/TemplatePicker/SizeRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(143, 42)
+text = "SMALL\n5x5 ~480c"
+
+[node name="MediumBtn" type="Button" parent="BuildPanel/VBox/TemplatePicker/SizeRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(143, 42)
+text = "MEDIUM\n7x7 ~640c"
+
+[node name="LargeBtn" type="Button" parent="BuildPanel/VBox/TemplatePicker/SizeRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(143, 42)
+text = "LARGE\n9x9 ~800c"
+
+[node name="TemplateCostLabel" type="Label" parent="BuildPanel/VBox/TemplatePicker"]
+layout_mode = 2
+text = "Will cost: ---"
+theme_override_font_sizes/font_size = 16
+horizontal_alignment = 1
+modulate = Color(0.9, 0.9, 0.2, 1.0)
+
+[node name="RepairAllBtn" type="Button" parent="BuildPanel/VBox"]
+visible = false
 layout_mode = 2
 custom_minimum_size = Vector2(0, 42)
-text = "v PLACE HERE"
-modulate = Color(0.3, 1.0, 0.5, 1.0)
+text = "REPAIR ALL WALLS — 0c"
+modulate = Color(1.0, 0.7, 0.2, 1.0)
 
 [node name="ReadyBtn" type="Button" parent="BuildPanel/VBox"]
 layout_mode = 2
@@ -291,6 +386,7 @@ offset_left = 40.0
 offset_top = -170.0
 offset_right = 168.0
 offset_bottom = -42.0
+knob_color = Color(0.3, 1.0, 0.3, 0.7)
 
 [node name="AimJoystick" parent="." instance=ExtResource("2_joystick")]
 layout_mode = 1
@@ -300,19 +396,260 @@ anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = -168.0
+knob_color = Color(1.0, 0.5, 0.1, 0.7)
 offset_top = -170.0
 offset_right = -40.0
 offset_bottom = -42.0
+
+[node name="PlaceBtn" type="Button" parent="."]
+visible = false
+layout_mode = 1
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -168.0
+offset_top = -246.0
+offset_right = -40.0
+offset_bottom = -180.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "BUILD HERE"
+modulate = Color(0.3, 1.0, 0.5, 1.0)
+
+[node name="WeaponShopOverlay" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_shop_overlay")
+
+[node name="Center" type="CenterContainer" parent="WeaponShopOverlay"]
+layout_mode = 2
+
+[node name="ShopPanel" type="PanelContainer" parent="WeaponShopOverlay/Center"]
+layout_mode = 2
+custom_minimum_size = Vector2(520, 0)
+theme_override_styles/panel = SubResource("StyleBoxFlat_shop_panel")
+
+[node name="Margin" type="MarginContainer" parent="WeaponShopOverlay/Center/ShopPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
+
+[node name="VBox" type="VBoxContainer" parent="WeaponShopOverlay/Center/ShopPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="TitleLabel" type="Label" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox"]
+layout_mode = 2
+text = "WEAPON SHOP"
+theme_override_font_sizes/font_size = 28
+horizontal_alignment = 1
+modulate = Color(1.0, 0.85, 0.1, 1.0)
+
+[node name="PistolCard" type="PanelContainer" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_weapon_card")
+
+[node name="HBox" type="HBoxContainer" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/PistolCard"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ColorRect" type="ColorRect" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/PistolCard/HBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(8, 0)
+color = Color(1.0, 0.9, 0.3, 1.0)
+
+[node name="Info" type="VBoxContainer" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/PistolCard/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="NameLabel" type="Label" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/PistolCard/HBox/Info"]
+layout_mode = 2
+text = "PISTOL"
+theme_override_font_sizes/font_size = 18
+
+[node name="StatsLabel" type="Label" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/PistolCard/HBox/Info"]
+layout_mode = 2
+text = "DMG: 20  •  FREE"
+theme_override_font_sizes/font_size = 14
+modulate = Color(0.7, 0.7, 0.7, 1.0)
+
+[node name="PistolBuyBtn" type="Button" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/PistolCard/HBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(100, 40)
+text = "EQUIP"
+
+[node name="ShotgunCard" type="PanelContainer" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_weapon_card")
+
+[node name="HBox" type="HBoxContainer" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/ShotgunCard"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ColorRect" type="ColorRect" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/ShotgunCard/HBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(8, 0)
+color = Color(1.0, 0.5, 0.1, 1.0)
+
+[node name="Info" type="VBoxContainer" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/ShotgunCard/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="NameLabel" type="Label" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/ShotgunCard/HBox/Info"]
+layout_mode = 2
+text = "SHOTGUN"
+theme_override_font_sizes/font_size = 18
+
+[node name="StatsLabel" type="Label" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/ShotgunCard/HBox/Info"]
+layout_mode = 2
+text = "DMG: 15 x5  •  75 coins"
+theme_override_font_sizes/font_size = 14
+modulate = Color(0.7, 0.7, 0.7, 1.0)
+
+[node name="ShotgunBuyBtn" type="Button" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/ShotgunCard/HBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(100, 40)
+text = "BUY 75c"
+
+[node name="RifleCard" type="PanelContainer" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_weapon_card")
+
+[node name="HBox" type="HBoxContainer" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/RifleCard"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ColorRect" type="ColorRect" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/RifleCard/HBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(8, 0)
+color = Color(0.3, 0.8, 1.0, 1.0)
+
+[node name="Info" type="VBoxContainer" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/RifleCard/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="NameLabel" type="Label" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/RifleCard/HBox/Info"]
+layout_mode = 2
+text = "RIFLE"
+theme_override_font_sizes/font_size = 18
+
+[node name="StatsLabel" type="Label" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/RifleCard/HBox/Info"]
+layout_mode = 2
+text = "DMG: 35  •  150 coins"
+theme_override_font_sizes/font_size = 14
+modulate = Color(0.7, 0.7, 0.7, 1.0)
+
+[node name="RifleBuyBtn" type="Button" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/RifleCard/HBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(100, 40)
+text = "BUY 150c"
+
+[node name="LmgCard" type="PanelContainer" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_weapon_card")
+
+[node name="HBox" type="HBoxContainer" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/LmgCard"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ColorRect" type="ColorRect" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/LmgCard/HBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(8, 0)
+color = Color(1.0, 0.3, 0.3, 1.0)
+
+[node name="Info" type="VBoxContainer" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/LmgCard/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="NameLabel" type="Label" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/LmgCard/HBox/Info"]
+layout_mode = 2
+text = "LMG"
+theme_override_font_sizes/font_size = 18
+
+[node name="StatsLabel" type="Label" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/LmgCard/HBox/Info"]
+layout_mode = 2
+text = "DMG: 18  •  250 coins"
+theme_override_font_sizes/font_size = 14
+modulate = Color(0.7, 0.7, 0.7, 1.0)
+
+[node name="LmgBuyBtn" type="Button" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/LmgCard/HBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(100, 40)
+text = "BUY 250c"
+
+[node name="CloseShopBtn" type="Button" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 36)
+text = "CLOSE"
+modulate = Color(0.7, 0.7, 0.7, 1.0)
+
+[node name="BuildPicker" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 0
+offset_right = 160.0
+offset_bottom = 200.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_picker_bg")
+
+[node name="VBox" type="VBoxContainer" parent="BuildPicker"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="WallPickBtn" type="Button" parent="BuildPicker/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(148, 54)
+text = "20c"
+
+[node name="DoorPickBtn" type="Button" parent="BuildPicker/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(148, 54)
+text = "20c"
+
+[node name="TowerPickBtn" type="Button" parent="BuildPicker/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(148, 54)
+text = "60c"
+
+[node name="ErasePickBtn" type="Button" parent="BuildPicker/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(148, 44)
+text = "ERASE  +10c"
 
 [connection signal="pressed" from="BuildPanel/VBox/Palette/WallBtn"  to="." method="_on_wall_btn_pressed"]
 [connection signal="pressed" from="BuildPanel/VBox/Palette/DoorBtn"  to="." method="_on_door_btn_pressed"]
 [connection signal="pressed" from="BuildPanel/VBox/Palette/TowerBtn" to="." method="_on_tower_btn_pressed"]
 [connection signal="pressed" from="BuildPanel/VBox/Palette/EraseBtn" to="." method="_on_erase_btn_pressed"]
+[connection signal="pressed" from="BuildPanel/VBox/Palette/TemplateBtn" to="." method="_on_template_btn_pressed"]
+[connection signal="pressed" from="BuildPanel/VBox/TemplatePicker/SizeRow/SmallBtn"  to="." method="_on_small_btn_pressed"]
+[connection signal="pressed" from="BuildPanel/VBox/TemplatePicker/SizeRow/MediumBtn" to="." method="_on_medium_btn_pressed"]
+[connection signal="pressed" from="BuildPanel/VBox/TemplatePicker/SizeRow/LargeBtn"  to="." method="_on_large_btn_pressed"]
+[connection signal="pressed" from="BuildPanel/VBox/RepairAllBtn" to="." method="_on_repair_all_btn_pressed"]
 [connection signal="pressed" from="BuyBtn"                           to="." method="_on_buy_btn_pressed"]
-[connection signal="pressed" from="BuildPanel/VBox/PlaceBtn"         to="." method="_on_place_btn_pressed"]
+[connection signal="pressed" from="PlaceBtn"                         to="." method="_on_place_btn_pressed"]
 [connection signal="pressed" from="BuildPanel/VBox/ReadyBtn"         to="." method="_on_ready_btn_pressed"]
 [connection signal="pressed" from="DoorToggleBtn"                    to="." method="_on_door_toggle_btn_pressed"]
 [connection signal="pressed" from="SupportPanel/VBox/AirstrikeBtn"   to="." method="_on_airstrike_btn_pressed"]
 [connection signal="pressed" from="SupportPanel/VBox/SquadBtn"       to="." method="_on_squad_btn_pressed"]
 [connection signal="pressed" from="SupportPanel/VBox/ShieldSquadBtn" to="." method="_on_shield_squad_btn_pressed"]
+[connection signal="pressed" from="BuildPicker/VBox/WallPickBtn"     to="." method="_on_pick_wall_pressed"]
+[connection signal="pressed" from="BuildPicker/VBox/DoorPickBtn"     to="." method="_on_pick_door_pressed"]
+[connection signal="pressed" from="BuildPicker/VBox/TowerPickBtn"    to="." method="_on_pick_tower_pressed"]
+[connection signal="pressed" from="BuildPicker/VBox/ErasePickBtn"    to="." method="_on_pick_erase_pressed"]
+[connection signal="pressed" from="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/PistolCard/HBox/PistolBuyBtn"   to="." method="_on_shop_pistol_pressed"]
+[connection signal="pressed" from="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/ShotgunCard/HBox/ShotgunBuyBtn" to="." method="_on_shop_shotgun_pressed"]
+[connection signal="pressed" from="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/RifleCard/HBox/RifleBuyBtn"     to="." method="_on_shop_rifle_pressed"]
+[connection signal="pressed" from="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/LmgCard/HBox/LmgBuyBtn"        to="." method="_on_shop_lmg_pressed"]
+[connection signal="pressed" from="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/CloseShopBtn"                   to="." method="_on_close_shop_pressed"]
 

@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://squad001"]
 
 [ext_resource type="Script" path="res://scripts/squad_member.gd" id="1_squad"]
-[ext_resource type="Texture2D" path="res://assets/squad/soldier1_gun.png" id="2_squad_tex"]
+[ext_resource type="Texture2D" path="res://assets/squad/squad.png" id="2_squad_tex"]
 
 [sub_resource type="CircleShape2D" id="CircleShape_body"]
 radius = 16.0

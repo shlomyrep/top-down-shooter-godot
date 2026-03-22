@@ -13,7 +13,6 @@ var _is_shooting := false
 
 var bullet_scene: PackedScene = preload("res://scenes/bullet.tscn")
 var aim_direction := Vector2.RIGHT
-var is_using_touch := false
 var move_input := Vector2.ZERO
 var aim_input := Vector2.ZERO
 
@@ -55,42 +54,24 @@ func _on_animation_finished() -> void:
 	_is_shooting = false
 
 func _physics_process(_delta: float) -> void:
-	# Movement from keyboard or virtual joystick
-	if not is_using_touch:
-		move_input = Vector2.ZERO
-		move_input.x = Input.get_axis("move_left", "move_right")
-		move_input.y = Input.get_axis("move_up", "move_down")
-
 	velocity = move_input.normalized() * speed
 	move_and_slide()
 
-	# Aim
 	if BuildManager.build_mode:
-		# Still update aim direction so the touch build cursor follows the joystick
-		if is_using_touch and aim_input.length() > 0.1:
+		if aim_input.length() > 0.1:
 			aim_direction = aim_input.normalized()
 		body_sprite.play("idle")
 		return
-	if is_using_touch:
-		if aim_input.length() > 0.1:
-			aim_direction = aim_input.normalized()
-			gun_pivot.rotation = aim_direction.angle()
-			# Auto-shoot when aiming with joystick
-			if shoot_cooldown.is_stopped():
-				shoot()
-				shoot_cooldown.start()
-	else:
-		gun_pivot.look_at(get_global_mouse_position())
-		aim_direction = (get_global_mouse_position() - global_position).normalized()
-		if Input.is_action_just_pressed("shoot"):
-			if shoot_cooldown.is_stopped():
-				shoot()
-				shoot_cooldown.start()
 
-	# Rotate sprite to face aim direction
+	if aim_input.length() > 0.1:
+		aim_direction = aim_input.normalized()
+		gun_pivot.rotation = aim_direction.angle()
+		if shoot_cooldown.is_stopped():
+			shoot()
+			shoot_cooldown.start()
+
 	body_sprite.rotation = gun_pivot.rotation
 
-	# Drive animation
 	if not _is_shooting:
 		if velocity.length() > 10.0:
 			body_sprite.play("move")
@@ -107,6 +88,7 @@ func shoot() -> void:
 		bullet.damage = w["damage"]
 		bullet.speed = w["bullet_speed"]
 		bullet.hit_color = w["bullet_color"]
+		bullet.bullet_scale = w.get("bullet_scale", 1.0)
 		get_tree().current_scene.add_child(bullet)
 	_is_shooting = true
 	body_sprite.play("shoot")
@@ -129,11 +111,3 @@ func _flash() -> void:
 	body_sprite.modulate = Color(10, 10, 10, 1)
 	var tween: Tween = create_tween()
 	tween.tween_property(body_sprite, "modulate", Color.WHITE, 0.15)
-
-func set_move_joystick(direction: Vector2) -> void:
-	is_using_touch = true
-	move_input = direction
-
-func set_aim_joystick(direction: Vector2) -> void:
-	is_using_touch = true
-	aim_input = direction

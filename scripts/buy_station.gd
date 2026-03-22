@@ -1,31 +1,56 @@
 extends Area2D
 
-## Weapon buy station. Place in the arena at a position reachable after opening
-## the base doors.  weapon_id must match a key in WeaponManager.WEAPONS.
+## Generic weapon shop station. Emits player_entered / player_exited.
 
-@export var weapon_id := "shotgun"
+@export var weapon_id := "shop"
+
+const DWELL_TIME := 1.5
 
 signal player_entered(station: Node)
 signal player_exited
 signal buy_requested(weapon_id: String, cost: int)
 
+@onready var _dwell_bar: ProgressBar = $DwellBar
+
 var _player_inside := false
+var _dwell_timer: Timer
+var _dwell_tween: Tween
 
 func _ready() -> void:
+	_dwell_timer = Timer.new()
+	_dwell_timer.one_shot = true
+	_dwell_timer.wait_time = DWELL_TIME
+	_dwell_timer.timeout.connect(_on_dwell_complete)
+	add_child(_dwell_timer)
+
 	body_entered.connect(_on_body_entered)
 	body_exited.connect(_on_body_exited)
 
-func _unhandled_input(event: InputEvent) -> void:
-	if _player_inside and event.is_action_pressed("interact"):
-		var w: Dictionary = WeaponManager.WEAPONS[weapon_id]
-		buy_requested.emit(weapon_id, w["cost"])
-
 func _on_body_entered(body: Node2D) -> void:
-	if body.is_in_group("player"):
-		_player_inside = true
-		player_entered.emit(self)
+	if not body.is_in_group("player"):
+		return
+	_player_inside = true
+	_dwell_bar.value = 0.0
+	_dwell_bar.visible = true
+	_dwell_timer.start(DWELL_TIME)
+	if _dwell_tween:
+		_dwell_tween.kill()
+	_dwell_tween = create_tween()
+	_dwell_tween.tween_property(_dwell_bar, "value", 100.0, DWELL_TIME)
 
 func _on_body_exited(body: Node2D) -> void:
-	if body.is_in_group("player"):
-		_player_inside = false
-		player_exited.emit()
+	if not body.is_in_group("player"):
+		return
+	_player_inside = false
+	_dwell_timer.stop()
+	if _dwell_tween:
+		_dwell_tween.kill()
+	_dwell_bar.value = 0.0
+	_dwell_bar.visible = false
+	player_exited.emit()
+
+func _on_dwell_complete() -> void:
+	if _dwell_tween:
+		_dwell_tween.kill()
+	_dwell_bar.visible = false
+	player_entered.emit(self)

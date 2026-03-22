@@ -91,6 +91,7 @@ func _try_shoot() -> void:
 	bullet.damage   = 22 if not shielded else 16
 	bullet.speed    = 820.0
 	bullet.hit_color = Color(0.3, 0.9, 0.5) if not shielded else Color(0.45, 0.55, 1.0)
+	bullet.source   = self
 	get_tree().current_scene.add_child(bullet)
 
 func _on_expired() -> void:

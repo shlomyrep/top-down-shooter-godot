@@ -1,0 +1,36 @@
+[gd_scene format=3 uid="uid://buge001"]
+
+[ext_resource type="Script" path="res://scripts/bug_enemy.gd" id="1_bug"]
+
+[sub_resource type="CircleShape2D" id="CircleShape_body"]
+radius = 15.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_health_bg"]
+bg_color = Color(0.15, 0.15, 0.15, 0.8)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[node name="BugEnemy" type="CharacterBody2D"]
+collision_layer = 2
+collision_mask = 41
+script = ExtResource("1_bug")
+
+[node name="BodySprite" type="AnimatedSprite2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape_body")
+
+[node name="HealthBarPivot" type="Node2D" parent="."]
+position = Vector2(0, -28)
+
+[node name="HealthBar" type="ProgressBar" parent="HealthBarPivot"]
+offset_left = -22.0
+offset_top = -4.0
+offset_right = 22.0
+offset_bottom = 4.0
+theme_override_styles/background = SubResource("StyleBoxFlat_health_bg")
+max_value = 90.0
+value = 90.0
+show_percentage = false

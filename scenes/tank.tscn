@@ -1,0 +1,56 @@
+[gd_scene format=3 uid="uid://tank001"]
+
+[ext_resource type="Script" path="res://scripts/tank.gd" id="1_tank"]
+[ext_resource type="Texture2D" path="res://assets/enemies/tankb.png" id="2_tankb"]
+[ext_resource type="Texture2D" path="res://assets/enemies/barrel.png" id="3_barrel"]
+
+[sub_resource type="CircleShape2D" id="CircleShape_body"]
+radius = 38.0
+
+[sub_resource type="CircleShape2D" id="CircleShape_hit"]
+radius = 44.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_health_bg"]
+bg_color = Color(0.15, 0.15, 0.15, 0.8)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[node name="Tank" type="CharacterBody2D"]
+collision_layer = 2
+collision_mask = 37
+script = ExtResource("1_tank")
+
+[node name="BodySprite" type="Sprite2D" parent="."]
+texture = ExtResource("2_tankb")
+scale = Vector2(0.45, 0.45)
+
+[node name="BarrelSprite" type="Sprite2D" parent="."]
+texture = ExtResource("3_barrel")
+scale = Vector2(0.45, 0.45)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape_body")
+
+[node name="HitArea" type="Area2D" parent="."]
+collision_layer = 2
+collision_mask = 33
+
+[node name="HitShape" type="CollisionShape2D" parent="HitArea"]
+shape = SubResource("CircleShape_hit")
+
+[node name="HealthBarPivot" type="Node2D" parent="."]
+position = Vector2(0, -44)
+
+[node name="HealthBar" type="ProgressBar" parent="HealthBarPivot"]
+offset_left = -28.0
+offset_top = -4.0
+offset_right = 28.0
+offset_bottom = 4.0
+theme_override_styles/background = SubResource("StyleBoxFlat_health_bg")
+max_value = 350.0
+value = 350.0
+show_percentage = false
+
+[connection signal="body_entered" from="HitArea" to="." method="_on_hit_area_body_entered"]

@@ -11,6 +11,7 @@ const WEAPONS: Dictionary = {
 		"spread":       0.0,
 		"bullet_speed": 900.0,
 		"bullet_color": Color(1.0, 0.9, 0.3, 1.0),
+		"bullet_scale": 1.0,
 	},
 	"shotgun": {
 		"name":         "Shotgun",
@@ -21,6 +22,7 @@ const WEAPONS: Dictionary = {
 		"spread":       0.30,
 		"bullet_speed": 700.0,
 		"bullet_color": Color(1.0, 0.5, 0.1, 1.0),
+		"bullet_scale": 0.7,
 	},
 	"rifle": {
 		"name":         "Rifle",
@@ -31,6 +33,7 @@ const WEAPONS: Dictionary = {
 		"spread":       0.0,
 		"bullet_speed": 1200.0,
 		"bullet_color": Color(0.3, 0.8, 1.0, 1.0),
+		"bullet_scale": 1.3,
 	},
 	"lmg": {
 		"name":         "LMG",
@@ -41,6 +44,7 @@ const WEAPONS: Dictionary = {
 		"spread":       0.12,
 		"bullet_speed": 900.0,
 		"bullet_color": Color(1.0, 0.3, 0.3, 1.0),
+		"bullet_scale": 0.85,
 	},
 }
 

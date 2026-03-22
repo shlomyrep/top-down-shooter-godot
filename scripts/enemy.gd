@@ -10,6 +10,13 @@ var player: Node2D = null
 var _is_dead := false
 var _knockback_velocity := Vector2.ZERO
 
+## AI state machine
+enum State { CHASE, ATTACK_STRUCTURE }
+var _state := State.CHASE
+var _wall_target: Node2D = null
+## Set when a squad soldier shoots this enemy
+var _aggro_target: Node2D = null
+
 const KNOCKBACK_FORCE   := 340.0
 const KNOCKBACK_DECAY   := 12.0
 
@@ -52,22 +59,68 @@ func _setup_animations() -> void:
 	body_sprite.sprite_frames = frames
 	body_sprite.play("idle")
 
+## Called by bullet.gd when a squad soldier's bullet hits this enemy.
+func set_aggro(attacker: Node2D) -> void:
+	if attacker and is_instance_valid(attacker) and attacker.is_in_group("squad"):
+		_aggro_target = attacker
+
 func _physics_process(delta: float) -> void:
 	if not player or not is_instance_valid(player):
 		return
-	var direction: Vector2 = (player.global_position - global_position).normalized()
-	# Blend knockback into normal movement velocity
-	_knockback_velocity = _knockback_velocity.lerp(Vector2.ZERO, KNOCKBACK_DECAY * delta)
-	velocity = direction * speed + _knockback_velocity
-	move_and_slide()
 
-	# Face movement direction but keep health bar upright
-	body_sprite.rotation = direction.angle()
-	health_bar_pivot.rotation = -rotation
+	# Clear stale references
+	if _aggro_target and not is_instance_valid(_aggro_target):
+		_aggro_target = null
+	if _wall_target and not is_instance_valid(_wall_target):
+		_wall_target = null
+		_state = State.CHASE
 
-	# Drive animation
-	if body_sprite.animation != "attack":
-		body_sprite.play("move")
+	# Prefer chasing the squad member that last shot us; fall back to player
+	var focus: Node2D = _aggro_target \
+			if (_aggro_target and is_instance_valid(_aggro_target)) \
+			else player
+
+	match _state:
+		State.CHASE:
+			var direction: Vector2 = (focus.global_position - global_position).normalized()
+			_knockback_velocity = _knockback_velocity.lerp(Vector2.ZERO, KNOCKBACK_DECAY * delta)
+			velocity = direction * speed + _knockback_velocity
+			move_and_slide()
+
+			body_sprite.rotation = direction.angle()
+			health_bar_pivot.rotation = -rotation
+
+			if body_sprite.animation != "attack":
+				body_sprite.play("move")
+
+			# Detect collision with a damageable structure → switch to wall-attack mode
+			for i in get_slide_collision_count():
+				var col := get_slide_collision(i)
+				var collider := col.get_collider()
+				if collider and collider.has_method("take_damage") \
+						and not collider.is_in_group("player") \
+						and not collider.is_in_group("squad"):
+					_wall_target = collider
+					_state = State.ATTACK_STRUCTURE
+					break
+
+		State.ATTACK_STRUCTURE:
+			velocity = Vector2.ZERO
+			move_and_slide()
+
+			if not _wall_target or not is_instance_valid(_wall_target):
+				_wall_target = null
+				_state = State.CHASE
+				return
+
+			var dir_to_wall: Vector2 = (_wall_target.global_position - global_position).normalized()
+			body_sprite.rotation = dir_to_wall.angle()
+			health_bar_pivot.rotation = -rotation
+
+			if attack_cooldown.is_stopped():
+				_wall_target.take_damage(damage)
+				attack_cooldown.start()
+				body_sprite.play("attack")
 
 func take_damage(amount: int) -> void:
 	if _is_dead:
@@ -108,10 +161,14 @@ func _spawn_death_effect() -> void:
 	get_tree().current_scene.add_child(particles)
 
 func _on_hit_area_body_entered(body: Node2D) -> void:
-	if body.has_method("take_damage") and attack_cooldown.is_stopped():
+	# Only melee-attack player and squad members; walls are handled by the state machine
+	var is_player_body := player != null and body == player
+	var is_squad_member := body.is_in_group("squad")
+	if (is_player_body or is_squad_member) and attack_cooldown.is_stopped():
 		body.take_damage(damage)
 		attack_cooldown.start()
 		body_sprite.play("attack")
-		# Knockback: push enemy away from whatever it just hit
-		var push_dir: Vector2 = (global_position - body.global_position).normalized()
-		_knockback_velocity = push_dir * KNOCKBACK_FORCE
+		# Knockback only applies when hitting the player
+		if is_player_body:
+			var push_dir: Vector2 = (global_position - body.global_position).normalized()
+			_knockback_velocity = push_dir * KNOCKBACK_FORCE
