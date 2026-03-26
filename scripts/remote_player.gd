@@ -4,15 +4,30 @@ extends Node2D
 ## Uses the same survivor sprite frames as the local player but tinted cyan
 ## so the two players are visually distinct.
 
-const LERP_SPEED := 18.0
+## Entity interpolation constants ─────────────────────────────────────────────
+## Render this many ms behind the most-recently received snapshot.
+## Covers 1 full packet interval (50 ms @ 20 Hz) + typical WiFi jitter.
+const INTERP_DELAY_MS   := 120.0
+## Hard cap on dead-reckoning extrapolation (ms). Beyond this, freeze.
+const EXTRAP_CAP_MS     := 250.0
+## If the interpolated position is farther than this, teleport instead of
+## gliding there (handles reconnects / scene reloads).
+const SNAP_THRESHOLD_PX := 400.0
+## Maximum number of snapshots to keep in the ring-buffer.
+const MAX_BUFFER_SIZE   := 30
 
-var _body:       AnimatedSprite2D
-var _name_lbl:   Label
-var _hp_bar:     ProgressBar
-var _lerp_target: Vector2
+var _body:     AnimatedSprite2D
+var _name_lbl: Label
+var _hp_bar:   ProgressBar
+
+## Sorted ring-buffer of received state snapshots.
+## Each entry: { recv_ts: float, x: float, y: float, rot: float, anim: String }
+var _snapshot_buffer: Array = []
+
+## True after the first real snapshot has set an initial position.
+var _initialized: bool = false
 
 func _ready() -> void:
-	_lerp_target = global_position
 	z_index = 1
 	add_to_group("target_players")
 	_build_visuals()
@@ -69,23 +84,100 @@ func _build_visuals() -> void:
 	_hp_bar.show_percentage = false
 	add_child(_hp_bar)
 
-func _physics_process(delta: float) -> void:
-	global_position = global_position.lerp(_lerp_target, LERP_SPEED * delta)
+func _physics_process(_delta: float) -> void:
+	if not _initialized or _snapshot_buffer.is_empty():
+		return
+
+	var render_time: float = float(Time.get_ticks_msec()) - INTERP_DELAY_MS
+
+	# Find snap_a (last snapshot ≤ render_time) and snap_b (first > render_time).
+	# Buffer is kept in ascending recv_ts order so we can break early.
+	var snap_a_idx: int = -1
+	for i in _snapshot_buffer.size():
+		if _snapshot_buffer[i].recv_ts <= render_time:
+			snap_a_idx = i
+		else:
+			break
+
+	var interp_pos:  Vector2
+	var interp_rot:  float
+	var interp_anim: String
+
+	if snap_a_idx == -1:
+		# render_time is before all buffered snapshots — hold at oldest position.
+		var oldest: Dictionary = _snapshot_buffer[0]
+		interp_pos  = Vector2(oldest.x, oldest.y)
+		interp_rot  = oldest.rot
+		interp_anim = oldest.anim
+
+	elif snap_a_idx == _snapshot_buffer.size() - 1:
+		# render_time is past all snapshots — dead-reckoning extrapolation.
+		var newest: Dictionary = _snapshot_buffer[snap_a_idx]
+		var age_ms: float = minf(float(Time.get_ticks_msec()) - newest.recv_ts - INTERP_DELAY_MS, EXTRAP_CAP_MS)
+		age_ms = maxf(age_ms, 0.0)
+		var vel := Vector2.ZERO
+		if _snapshot_buffer.size() >= 2:
+			var prev: Dictionary = _snapshot_buffer[snap_a_idx - 1]
+			var dt: float = newest.recv_ts - prev.recv_ts
+			if dt > 0.0:
+				vel = (Vector2(newest.x, newest.y) - Vector2(prev.x, prev.y)) / dt
+		interp_pos  = Vector2(newest.x, newest.y) + vel * age_ms
+		interp_rot  = newest.rot
+		interp_anim = newest.anim
+
+	else:
+		# Normal interpolation between the two bracketing snapshots.
+		var snap_a: Dictionary = _snapshot_buffer[snap_a_idx]
+		var snap_b: Dictionary = _snapshot_buffer[snap_a_idx + 1]
+		var dt: float = snap_b.recv_ts - snap_a.recv_ts
+		var t: float  = clampf((render_time - snap_a.recv_ts) / dt, 0.0, 1.0)
+		interp_pos  = Vector2(snap_a.x, snap_a.y).lerp(Vector2(snap_b.x, snap_b.y), t)
+		interp_rot  = lerp_angle(snap_a.rot, snap_b.rot, t)
+		interp_anim = snap_b.anim
+
+	# Apply position — snap if extremely far (reconnect / scene-reload artifact).
+	if global_position.distance_to(interp_pos) > SNAP_THRESHOLD_PX:
+		global_position = interp_pos
+	else:
+		global_position = interp_pos
+
+	_body.rotation = interp_rot
+	if _body.animation != interp_anim:
+		_body.play(interp_anim)
+
+	# Prune snapshots older than the render window (keep at least 2).
+	while _snapshot_buffer.size() > 2 and _snapshot_buffer[0].recv_ts < render_time - 50.0:
+		_snapshot_buffer.remove_at(0)
 
 ## Called by main.gd whenever a remote_player_state packet arrives.
 func apply_state(data: Dictionary) -> void:
-	_lerp_target = Vector2(float(data.get("x", global_position.x)),
-	                       float(data.get("y", global_position.y)))
-	_body.rotation = float(data.get("rot", 0.0))
+	var snap := {
+		"recv_ts": float(Time.get_ticks_msec()),
+		"x":       float(data.get("x", global_position.x)),
+		"y":       float(data.get("y", global_position.y)),
+		"rot":     float(data.get("rot", 0.0)),
+		"anim":    str(data.get("anim", "idle")),
+	}
+	_snapshot_buffer.append(snap)
+	if _snapshot_buffer.size() > MAX_BUFFER_SIZE:
+		_snapshot_buffer.remove_at(0)
 
-	var anim: String = str(data.get("anim", "idle"))
-	if _body.animation != anim:
-		_body.play(anim)
+	# On first packet: teleport to the real position immediately so there
+	# is no cold-start glide from the default arena-center spawn point.
+	if not _initialized:
+		_initialized = true
+		global_position = Vector2(snap.x, snap.y)
 
+	# Health and name are shown immediately — no interpolation delay needed.
 	var hp:     int = int(data.get("hp",     100))
 	var max_hp: int = int(data.get("max_hp", 100))
 	_hp_bar.max_value = max_hp
 	_hp_bar.value     = hp
-
-	# Refresh name label in case GameData was updated after _ready
 	_name_lbl.text = GameData.partner_name
+
+## Teleport immediately to a position and clear the snapshot buffer.
+## Useful for explicit repositioning (e.g. scene reset or reconnect).
+func teleport_to(pos: Vector2) -> void:
+	global_position = pos
+	_snapshot_buffer.clear()
+	_initialized = false

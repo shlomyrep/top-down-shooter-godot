@@ -1,5 +1,8 @@
 extends Control
 
+## Increment this every build so both devices can confirm they're on the same version.
+const BUILD_NUMBER := 4
+
 @onready var partner_avatar_label: Label = $MainVBox/SlotRow/PartnerSlot/SlotMargin/SlotVBox/AvatarLabel
 @onready var partner_name_label: Label   = $MainVBox/SlotRow/PartnerSlot/SlotMargin/SlotVBox/NameLabel
 @onready var partner_status_label: Label = $MainVBox/SlotRow/PartnerSlot/SlotMargin/SlotVBox/StatusLabel
@@ -21,6 +24,23 @@ func _ready() -> void:
 	start_btn.disabled = true
 	_apply_slot_styles()
 	_connect_network_signals()
+	_add_build_label()
+
+func _add_build_label() -> void:
+	var lbl := Label.new()
+	lbl.text = "BUILD  %d" % BUILD_NUMBER
+	lbl.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	lbl.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	lbl.grow_vertical   = Control.GROW_DIRECTION_BEGIN
+	lbl.offset_right  = -12.0
+	lbl.offset_bottom = -10.0
+	var ls := LabelSettings.new()
+	ls.font_size    = 16
+	ls.font_color   = Color(1.0, 0.85, 0.2, 0.9)
+	ls.outline_size  = 2
+	ls.outline_color = Color(0.0, 0.0, 0.0, 0.85)
+	lbl.label_settings = ls
+	add_child(lbl)
 
 func _connect_network_signals() -> void:
 	NetworkManager.connected_to_server.connect(_on_server_connected)

@@ -19,8 +19,9 @@ var aim_direction := Vector2.RIGHT
 var move_input    := Vector2.ZERO
 var aim_input     := Vector2.ZERO
 
-# Multiplayer: broadcast state at ~12 Hz
-const _NET_INTERVAL := 0.083
+# Multiplayer: broadcast state at 20 Hz — tighter intervals reduce max positional
+# jump per packet and give the entity-interpolation buffer more waypoints.
+const _NET_INTERVAL := 0.050
 var _net_timer: float = 0.0
 
 signal health_changed(current: int, maximum: int)

@@ -435,6 +435,10 @@ func _try_place_at(cell: Vector2i) -> void:
 		var replacement := _create_structure(BuildManager.selected, cell)
 		add_child(replacement)
 		BuildManager.register(cell, replacement)
+		if GameData.is_multiplayer:
+			# Sync the replacement: erase old then place new on partner's screen.
+			NetworkManager.send_structure_erased(cell.x, cell.y)
+			NetworkManager.send_structure_placed(BuildManager.selected, cell.x, cell.y)
 		return
 
 	var cost: int = BuildManager.COSTS[BuildManager.selected]
@@ -749,6 +753,8 @@ func _try_place_template() -> void:
 		var structure := _create_structure(entry.type, entry.cell)
 		add_child(structure)
 		BuildManager.register(entry.cell, structure)
+		if GameData.is_multiplayer:
+			NetworkManager.send_structure_placed(entry.type, entry.cell.x, entry.cell.y)
 
 func _on_player_health_changed(current: int, maximum: int) -> void:
 	hud.update_health(current, maximum)
@@ -1028,9 +1034,18 @@ func _on_remote_build_end_vote() -> void:
 
 func _on_remote_structure_placed(data: Dictionary) -> void:
 	var cell := Vector2i(int(data.get("cx", 0)), int(data.get("cy", 0)))
-	if BuildManager.is_occupied(cell) or BuildManager.is_reserved(cell):
+	if BuildManager.is_reserved(cell):
 		return
-	var s := _create_structure(str(data.get("type", "wall")), cell)
+	# If the cell is already occupied (replacement scenario), remove the old one first.
+	if BuildManager.is_occupied(cell):
+		var old: Node = BuildManager.occupied_cells[cell]
+		if old and is_instance_valid(old):
+			old.queue_free()
+		BuildManager.unregister(cell)
+	var type := str(data.get("type", "wall"))
+	if type not in ["wall", "door", "tower"]:
+		return  # Unknown type — ignore rather than crash
+	var s := _create_structure(type, cell)
 	add_child(s)
 	BuildManager.register(cell, s)
 
