@@ -37,9 +37,15 @@ extends Control
 @onready var _shotgun_buy_btn    := $WeaponShopOverlay/Center/ShopPanel/Margin/VBox/ShotgunCard/HBox/ShotgunBuyBtn
 @onready var _rifle_buy_btn      := $WeaponShopOverlay/Center/ShopPanel/Margin/VBox/RifleCard/HBox/RifleBuyBtn
 @onready var _lmg_buy_btn        := $WeaponShopOverlay/Center/ShopPanel/Margin/VBox/LmgCard/HBox/LmgBuyBtn
+@onready var shield_bar          := $TopBar/ShieldBar
+@onready var shield_label        := $TopBar/ShieldBar/ShieldLabel
+@onready var recovery_shop_overlay := $RecoveryShopOverlay
+@onready var _health_buy_btn     := $RecoveryShopOverlay/Center/ShopPanel/Margin/VBox/HealthCard/HBox/HealthBuyBtn
+@onready var _shield_buy_btn     := $RecoveryShopOverlay/Center/ShopPanel/Margin/VBox/ShieldCard/HBox/ShieldBuyBtn
 
 signal buy_pressed
 signal weapon_shop_buy(weapon_id: String)
+signal recovery_shop_buy(item_id: String)
 signal build_ready_pressed
 signal build_place_pressed
 signal build_item_selected(item: String)
@@ -81,6 +87,22 @@ func _ready() -> void:
 		btn.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
 	# Show handgun initially
 	update_weapon("pistol")
+
+	# Support panel — icon-only buttons
+	var airstrike_tex := load("res://assets/enemies/barrel.png") as Texture2D
+	var squad_tex     := load("res://assets/squad/squad.png") as Texture2D
+	var shield_sq_tex := load("res://assets/squad/soldier1_machine.png") as Texture2D
+	for pair: Array in [
+		[airstrike_btn,    airstrike_tex],
+		[squad_btn,        squad_tex],
+		[shield_squad_btn, shield_sq_tex],
+	]:
+		var btn: Button = pair[0]
+		btn.icon = pair[1] as Texture2D
+		btn.expand_icon = true
+		btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		btn.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
+		btn.text = ""
 
 func _process(delta: float) -> void:
 	if _door_toggle_cooldown > 0.0:
@@ -186,6 +208,56 @@ func _on_shop_lmg_pressed() -> void:
 
 func _on_close_shop_pressed() -> void:
 	hide_weapon_shop()
+
+# ─── Recovery shop ───────────────────────────────────────────────────────────
+
+func update_shield(current: int, maximum: int) -> void:
+	shield_bar.visible = maximum > 0
+	shield_bar.value = float(current) / float(maximum) * 100.0 if maximum > 0 else 0.0
+	shield_label.text = str(current) + " / " + str(maximum)
+
+func show_recovery_shop(player_coins: int, player_health: int, max_health: int, player_shield: int) -> void:
+	_refresh_recovery_buttons(player_coins, player_health, max_health, player_shield)
+	recovery_shop_overlay.visible = true
+
+func hide_recovery_shop() -> void:
+	recovery_shop_overlay.visible = false
+
+func _refresh_recovery_buttons(player_coins: int, player_health: int, max_health: int, player_shield: int) -> void:
+	if player_health >= max_health:
+		_health_buy_btn.text = "FULL"
+		_health_buy_btn.disabled = true
+		_health_buy_btn.modulate = Color(0.3, 1.0, 0.5, 1.0)
+	elif player_coins >= 40:
+		_health_buy_btn.text = "BUY 40c"
+		_health_buy_btn.disabled = false
+		_health_buy_btn.modulate = Color.WHITE
+	else:
+		_health_buy_btn.text = "40c"
+		_health_buy_btn.disabled = true
+		_health_buy_btn.modulate = Color(1.0, 0.3, 0.3, 0.7)
+
+	if player_shield >= 100:
+		_shield_buy_btn.text = "FULL"
+		_shield_buy_btn.disabled = true
+		_shield_buy_btn.modulate = Color(0.3, 0.6, 1.0, 1.0)
+	elif player_coins >= 75:
+		_shield_buy_btn.text = "BUY 75c"
+		_shield_buy_btn.disabled = false
+		_shield_buy_btn.modulate = Color.WHITE
+	else:
+		_shield_buy_btn.text = "75c"
+		_shield_buy_btn.disabled = true
+		_shield_buy_btn.modulate = Color(1.0, 0.3, 0.3, 0.7)
+
+func _on_recovery_health_pressed() -> void:
+	recovery_shop_buy.emit("health")
+
+func _on_recovery_shield_pressed() -> void:
+	recovery_shop_buy.emit("shield")
+
+func _on_close_recovery_pressed() -> void:
+	hide_recovery_shop()
 
 # ─── Build mode ──────────────────────────────────────────────────────────────
 
@@ -319,17 +391,17 @@ func update_support_cooldowns(
 		cd_air: float, max_air: float,
 		cd_sq: float,  max_sq: float,
 		cd_sh: float,  max_sh: float) -> void:
-	_set_btn_cooldown(airstrike_btn,    cd_air, max_air, "AIR STRIKE\n80c")
-	_set_btn_cooldown(squad_btn,        cd_sq,  max_sq,  "SQUAD\n50c")
-	_set_btn_cooldown(shield_squad_btn, cd_sh,  max_sh,  "SHIELD SQ.\n90c")
+	_set_btn_cooldown(airstrike_btn,    cd_air, max_air, "80c")
+	_set_btn_cooldown(squad_btn,        cd_sq,  max_sq,  "50c")
+	_set_btn_cooldown(shield_squad_btn, cd_sh,  max_sh,  "90c")
 
-func _set_btn_cooldown(btn: Button, cd: float, max_cd: float, label: String) -> void:
+func _set_btn_cooldown(btn: Button, cd: float, max_cd: float, cost_label: String) -> void:
 	if cd <= 0.0:
-		btn.text = label
+		btn.text = cost_label
 		btn.modulate = Color.WHITE
 		btn.disabled = false
 	else:
-		btn.text = label + "\n" + str(int(ceil(cd))) + "s"
+		btn.text = str(int(ceil(cd))) + "s"
 		btn.modulate = Color(0.45, 0.45, 0.45, 1.0)
 		btn.disabled = true
 

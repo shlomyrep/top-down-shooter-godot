@@ -1,0 +1,124 @@
+[gd_scene format=3 uid="uid://gameover1"]
+
+[ext_resource type="Script" path="res://scripts/game_over.gd" id="1_go"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.05, 0.04, 0.1, 0.97)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+border_width_bottom = 2
+border_width_top = 2
+border_width_left = 2
+border_width_right = 2
+border_color = Color(0.55, 0.1, 0.12, 0.9)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_record_badge"]
+bg_color = Color(0.55, 0.4, 0.0, 0.88)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="GameOver" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_go")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.02, 0.02, 0.06, 1.0)
+
+[node name="CenterContainer" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Panel" type="PanelContainer" parent="CenterContainer"]
+custom_minimum_size = Vector2(400, 0)
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Margin" type="MarginContainer" parent="CenterContainer/Panel"]
+theme_override_constants/margin_left = 44
+theme_override_constants/margin_right = 44
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_bottom = 40
+
+[node name="VBox" type="VBoxContainer" parent="CenterContainer/Panel/Margin"]
+theme_override_constants/separation = 20
+
+[node name="GameOverLabel" type="Label" parent="CenterContainer/Panel/Margin/VBox"]
+text = "GAME  OVER"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 54
+theme_override_colors/font_color = Color(0.9, 0.15, 0.15, 1.0)
+
+[node name="WaveSep" type="HSeparator" parent="CenterContainer/Panel/Margin/VBox"]
+modulate = Color(0.4, 0.1, 0.12, 0.7)
+
+[node name="WaveRow" type="HBoxContainer" parent="CenterContainer/Panel/Margin/VBox"]
+alignment = 1
+theme_override_constants/separation = 16
+
+[node name="WavePrefixLabel" type="Label" parent="CenterContainer/Panel/Margin/VBox/WaveRow"]
+text = "WAVE REACHED"
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.58, 0.62, 0.82, 1.0)
+
+[node name="WaveNumberLabel" type="Label" parent="CenterContainer/Panel/Margin/VBox/WaveRow"]
+text = "—"
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 52
+theme_override_colors/font_color = Color(1.0, 0.78, 0.1, 1.0)
+
+[node name="NewRecordBadge" type="PanelContainer" parent="CenterContainer/Panel/Margin/VBox"]
+visible = false
+theme_override_styles/panel = SubResource("StyleBoxFlat_record_badge")
+
+[node name="RecordMargin" type="MarginContainer" parent="CenterContainer/Panel/Margin/VBox/NewRecordBadge"]
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="NewRecordLabel" type="Label" parent="CenterContainer/Panel/Margin/VBox/NewRecordBadge/RecordMargin"]
+text = "✨  NEW RECORD!"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(1.0, 0.95, 0.45, 1.0)
+
+[node name="BestRow" type="HBoxContainer" parent="CenterContainer/Panel/Margin/VBox"]
+alignment = 1
+theme_override_constants/separation = 10
+
+[node name="BestLabel" type="Label" parent="CenterContainer/Panel/Margin/VBox/BestRow"]
+text = "🏆  BEST:"
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.48, 0.56, 0.78, 1.0)
+
+[node name="BestWaveNum" type="Label" parent="CenterContainer/Panel/Margin/VBox/BestRow"]
+text = "—"
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.28, 0.88, 1.0, 1.0)
+
+[node name="ButtonRow" type="HBoxContainer" parent="CenterContainer/Panel/Margin/VBox"]
+alignment = 1
+theme_override_constants/separation = 16
+
+[node name="PlayAgainBtn" type="Button" parent="CenterContainer/Panel/Margin/VBox/ButtonRow"]
+text = "▶  PLAY AGAIN"
+
+[node name="MainMenuBtn" type="Button" parent="CenterContainer/Panel/Margin/VBox/ButtonRow"]
+text = "⬅  MAIN MENU"
+
+[connection signal="pressed" from="CenterContainer/Panel/Margin/VBox/ButtonRow/PlayAgainBtn" to="." method="_on_play_again_btn_pressed"]
+[connection signal="pressed" from="CenterContainer/Panel/Margin/VBox/ButtonRow/MainMenuBtn" to="." method="_on_main_menu_btn_pressed"]

@@ -1,0 +1,231 @@
+[gd_scene format=3 uid="uid://mainmenu01"]
+
+[ext_resource type="Script" path="res://scripts/main_menu.gd" id="1_mm"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.06, 0.08, 0.16, 0.95)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_record"]
+bg_color = Color(0.04, 0.14, 0.22, 0.9)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+border_width_bottom = 2
+border_width_top = 2
+border_width_left = 2
+border_width_right = 2
+border_color = Color(0.28, 0.75, 1.0, 0.55)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dialog"]
+bg_color = Color(0.06, 0.08, 0.18, 0.98)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+border_width_bottom = 1
+border_width_top = 1
+border_width_left = 1
+border_width_right = 1
+border_color = Color(0.25, 0.45, 0.72, 0.8)
+
+[node name="MainMenu" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_mm")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.04, 0.04, 0.1, 1.0)
+
+[node name="CenterContainer" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="MainPanel" type="PanelContainer" parent="CenterContainer"]
+custom_minimum_size = Vector2(400, 0)
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="PanelMargin" type="MarginContainer" parent="CenterContainer/MainPanel"]
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_top = 36
+theme_override_constants/margin_bottom = 36
+
+[node name="InnerVBox" type="VBoxContainer" parent="CenterContainer/MainPanel/PanelMargin"]
+theme_override_constants/separation = 18
+
+[node name="HeaderBox" type="HBoxContainer" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox"]
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="FistLabel" type="Label" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox/HeaderBox"]
+text = "✊"
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 52
+theme_override_colors/font_color = Color(1.0, 0.68, 0.1, 1.0)
+
+[node name="TitleLabel" type="Label" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox/HeaderBox"]
+text = "RESISTANCE"
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 50
+theme_override_colors/font_color = Color(0.95, 0.95, 1.0, 1.0)
+
+[node name="TaglineLabel" type="Label" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox"]
+text = "SURVIVE · BUILD · RESIST"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 15
+theme_override_colors/font_color = Color(0.48, 0.58, 0.8, 1.0)
+
+[node name="Separator" type="HSeparator" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox"]
+modulate = Color(0.28, 0.38, 0.58, 0.55)
+
+[node name="RecordPanel" type="PanelContainer" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox"]
+theme_override_styles/panel = SubResource("StyleBoxFlat_record")
+
+[node name="Margin" type="MarginContainer" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox/RecordPanel"]
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="HBox" type="HBoxContainer" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox/RecordPanel/Margin"]
+theme_override_constants/separation = 8
+
+[node name="TrophyLabel" type="Label" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox/RecordPanel/Margin/HBox"]
+text = "🏆"
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 20
+
+[node name="RecordHeaderLabel" type="Label" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox/RecordPanel/Margin/HBox"]
+text = "BEST WAVE:"
+vertical_alignment = 1
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 17
+theme_override_colors/font_color = Color(0.45, 0.62, 0.82, 1.0)
+
+[node name="RecordWaveLabel" type="Label" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox/RecordPanel/Margin/HBox"]
+text = "—"
+horizontal_alignment = 2
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(0.28, 0.88, 1.0, 1.0)
+
+[node name="Spacer1" type="Control" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox"]
+custom_minimum_size = Vector2(0, 4)
+
+[node name="Buttons" type="VBoxContainer" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox"]
+theme_override_constants/separation = 12
+
+[node name="SoloBtn" type="Button" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox/Buttons"]
+size_flags_horizontal = 3
+text = "▶   SOLO START"
+
+[node name="MultiBtn" type="Button" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox/Buttons"]
+size_flags_horizontal = 3
+text = "👥   MULTIPLAYER"
+
+[node name="Spacer2" type="Control" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox"]
+custom_minimum_size = Vector2(0, 2)
+
+[node name="VersionLabel" type="Label" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox"]
+text = "RESISTANCE  ·  Early Access  v0.1"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.28, 0.32, 0.48, 0.75)
+
+[node name="BottomBar" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchor_left = 0.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12
+offset_top = -44
+offset_right = -12
+offset_bottom = -8
+theme_override_constants/separation = 8
+
+[node name="PlayerNameLabel" type="Label" parent="BottomBar"]
+size_flags_horizontal = 3
+text = "@SURVIVOR"
+horizontal_alignment = 2
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.38, 0.48, 0.72, 0.85)
+
+[node name="EditNameBtn" type="Button" parent="BottomBar"]
+text = "✏ CALLSIGN"
+flat = true
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.38, 0.62, 0.92, 0.85)
+
+[node name="NameDialog" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+visible = false
+
+[node name="DimOverlay" type="ColorRect" parent="NameDialog"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.0, 0.0, 0.0, 0.72)
+mouse_filter = 0
+
+[node name="DialogCenter" type="CenterContainer" parent="NameDialog"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="DialogPanel" type="PanelContainer" parent="NameDialog/DialogCenter"]
+custom_minimum_size = Vector2(320, 0)
+theme_override_styles/panel = SubResource("StyleBoxFlat_dialog")
+
+[node name="DialogMargin" type="MarginContainer" parent="NameDialog/DialogCenter/DialogPanel"]
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="DialogVBox" type="VBoxContainer" parent="NameDialog/DialogCenter/DialogPanel/DialogMargin"]
+theme_override_constants/separation = 16
+
+[node name="DialogTitle" type="Label" parent="NameDialog/DialogCenter/DialogPanel/DialogMargin/DialogVBox"]
+text = "ENTER CALLSIGN"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.82, 0.88, 1.0, 1.0)
+
+[node name="NameEdit" type="LineEdit" parent="NameDialog/DialogCenter/DialogPanel/DialogMargin/DialogVBox"]
+placeholder_text = "SURVIVOR"
+max_length = 16
+
+[node name="BtnRow" type="HBoxContainer" parent="NameDialog/DialogCenter/DialogPanel/DialogMargin/DialogVBox"]
+alignment = 2
+theme_override_constants/separation = 10
+
+[node name="CancelBtn" type="Button" parent="NameDialog/DialogCenter/DialogPanel/DialogMargin/DialogVBox/BtnRow"]
+text = "CANCEL"
+
+[node name="ConfirmBtn" type="Button" parent="NameDialog/DialogCenter/DialogPanel/DialogMargin/DialogVBox/BtnRow"]
+text = "CONFIRM"
+
+[connection signal="pressed" from="CenterContainer/MainPanel/PanelMargin/InnerVBox/Buttons/SoloBtn" to="." method="_on_solo_btn_pressed"]
+[connection signal="pressed" from="CenterContainer/MainPanel/PanelMargin/InnerVBox/Buttons/MultiBtn" to="." method="_on_multi_btn_pressed"]
+[connection signal="pressed" from="BottomBar/EditNameBtn" to="." method="_on_edit_name_btn_pressed"]
+[connection signal="pressed" from="NameDialog/DialogCenter/DialogPanel/DialogMargin/DialogVBox/BtnRow/ConfirmBtn" to="." method="_on_confirm_btn_pressed"]
+[connection signal="pressed" from="NameDialog/DialogCenter/DialogPanel/DialogMargin/DialogVBox/BtnRow/CancelBtn" to="." method="_on_cancel_btn_pressed"]

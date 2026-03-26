@@ -32,21 +32,21 @@ polygon = PackedVector2Array(-28, -28, 28, -28, 28, 28, -28, 28)
 color = Color(0.15, 0.55, 0.2, 0.95)
 
 [node name="NameLabel" type="Label" parent="."]
-offset_left = -80.0
-offset_top = -70.0
-offset_right = 80.0
-offset_bottom = -46.0
-text = "SHOTGUN"
-theme_override_font_sizes/font_size = 16
+offset_left = -28.0
+offset_top = -88.0
+offset_right = 28.0
+offset_bottom = -48.0
+text = "🔫"
+theme_override_font_sizes/font_size = 34
 horizontal_alignment = 1
-modulate = Color(0.3, 1.0, 0.4, 1.0)
+modulate = Color(1.0, 1.0, 1.0, 1.0)
 
 [node name="CostLabel" type="Label" parent="."]
 offset_left = -80.0
 offset_top = -46.0
 offset_right = 80.0
 offset_bottom = -22.0
-text = "75 coins"
+text = ""
 theme_override_font_sizes/font_size = 14
 horizontal_alignment = 1
 modulate = Color(1.0, 0.9, 0.2, 1.0)

@@ -11,10 +11,12 @@ signal player_exited
 signal buy_requested(weapon_id: String, cost: int)
 
 @onready var _dwell_bar: ProgressBar = $DwellBar
+@onready var _icon_label: Label = $NameLabel
 
 var _player_inside := false
 var _dwell_timer: Timer
 var _dwell_tween: Tween
+var _float_tween: Tween
 
 func _ready() -> void:
 	_dwell_timer = Timer.new()
@@ -25,6 +27,17 @@ func _ready() -> void:
 
 	body_entered.connect(_on_body_entered)
 	body_exited.connect(_on_body_exited)
+
+	_start_float()
+
+func _start_float() -> void:
+	var base_y := _icon_label.position.y
+	_float_tween = create_tween()
+	_float_tween.set_loops()
+	_float_tween.tween_property(_icon_label, "position:y", base_y - 8.0, 1.1) \
+		.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+	_float_tween.tween_property(_icon_label, "position:y", base_y, 1.1) \
+		.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
 
 func _on_body_entered(body: Node2D) -> void:
 	if not body.is_in_group("player"):

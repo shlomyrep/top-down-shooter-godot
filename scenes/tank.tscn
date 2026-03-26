@@ -29,6 +29,7 @@ scale = Vector2(0.45, 0.45)
 [node name="BarrelSprite" type="Sprite2D" parent="."]
 texture = ExtResource("3_barrel")
 scale = Vector2(0.45, 0.45)
+offset = Vector2(-28, 0)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape_body")
@@ -49,8 +50,8 @@ offset_top = -4.0
 offset_right = 28.0
 offset_bottom = 4.0
 theme_override_styles/background = SubResource("StyleBoxFlat_health_bg")
-max_value = 350.0
-value = 350.0
+max_value = 3600.0
+value = 3600.0
 show_percentage = false
 
 [connection signal="body_entered" from="HitArea" to="." method="_on_hit_area_body_entered"]

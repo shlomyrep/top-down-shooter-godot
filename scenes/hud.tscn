@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://hud001"]
+[gd_scene load_steps=16 format=3 uid="uid://hud001"]
 
 [ext_resource type="Script" path="res://scripts/hud.gd" id="1_hud"]
 [ext_resource type="PackedScene" uid="uid://joystick01" path="res://scenes/virtual_joystick.tscn" id="2_joystick"]
@@ -29,6 +29,20 @@ corner_radius_bottom_left = 4
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_health_fill"]
 bg_color = Color(0.2, 0.85, 0.3, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_shield_bg"]
+bg_color = Color(0.05, 0.1, 0.28, 0.8)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_shield_fill"]
+bg_color = Color(0.3, 0.6, 1.0, 1.0)
 corner_radius_top_left = 4
 corner_radius_top_right = 4
 corner_radius_bottom_right = 4
@@ -195,6 +209,26 @@ custom_minimum_size = Vector2(40, 40)
 expand_mode = 1
 stretch_mode = 5
 
+[node name="ShieldBar" type="ProgressBar" parent="TopBar"]
+visible = false
+layout_mode = 2
+custom_minimum_size = Vector2(180, 24)
+theme_override_styles/background = SubResource("StyleBoxFlat_shield_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_shield_fill")
+value = 0.0
+show_percentage = false
+
+[node name="ShieldLabel" type="Label" parent="TopBar/ShieldBar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "0 / 100"
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [node name="BuyPromptLabel" type="Label" parent="."]
 visible = false
 layout_mode = 1
@@ -353,9 +387,9 @@ anchor_top = 0.5
 anchor_right = 0.0
 anchor_bottom = 0.5
 offset_left = 10.0
-offset_top = -80.0
+offset_top = -110.0
 offset_right = 130.0
-offset_bottom = 120.0
+offset_bottom = 160.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_support_bg")
 
 [node name="VBox" type="VBoxContainer" parent="SupportPanel"]
@@ -364,18 +398,15 @@ theme_override_constants/separation = 6
 
 [node name="AirstrikeBtn" type="Button" parent="SupportPanel/VBox"]
 layout_mode = 2
-custom_minimum_size = Vector2(118, 58)
-text = "AIR STRIKE\n80c"
+custom_minimum_size = Vector2(118, 80)
 
 [node name="SquadBtn" type="Button" parent="SupportPanel/VBox"]
 layout_mode = 2
-custom_minimum_size = Vector2(118, 58)
-text = "SQUAD\n50c"
+custom_minimum_size = Vector2(118, 80)
 
 [node name="ShieldSquadBtn" type="Button" parent="SupportPanel/VBox"]
 layout_mode = 2
-custom_minimum_size = Vector2(118, 58)
-text = "SHIELD SQ.\n90c"
+custom_minimum_size = Vector2(118, 80)
 
 [node name="MoveJoystick" parent="." instance=ExtResource("2_joystick")]
 layout_mode = 1
@@ -596,6 +627,117 @@ custom_minimum_size = Vector2(0, 36)
 text = "CLOSE"
 modulate = Color(0.7, 0.7, 0.7, 1.0)
 
+[node name="RecoveryShopOverlay" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_shop_overlay")
+
+[node name="Center" type="CenterContainer" parent="RecoveryShopOverlay"]
+layout_mode = 2
+
+[node name="ShopPanel" type="PanelContainer" parent="RecoveryShopOverlay/Center"]
+layout_mode = 2
+custom_minimum_size = Vector2(480, 0)
+theme_override_styles/panel = SubResource("StyleBoxFlat_shop_panel")
+
+[node name="Margin" type="MarginContainer" parent="RecoveryShopOverlay/Center/ShopPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
+
+[node name="VBox" type="VBoxContainer" parent="RecoveryShopOverlay/Center/ShopPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="TitleLabel" type="Label" parent="RecoveryShopOverlay/Center/ShopPanel/Margin/VBox"]
+layout_mode = 2
+text = "RECOVERY STATION"
+theme_override_font_sizes/font_size = 28
+horizontal_alignment = 1
+modulate = Color(0.4, 0.8, 1.0, 1.0)
+
+[node name="HealthCard" type="PanelContainer" parent="RecoveryShopOverlay/Center/ShopPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_weapon_card")
+
+[node name="HBox" type="HBoxContainer" parent="RecoveryShopOverlay/Center/ShopPanel/Margin/VBox/HealthCard"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ColorRect" type="ColorRect" parent="RecoveryShopOverlay/Center/ShopPanel/Margin/VBox/HealthCard/HBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(8, 0)
+color = Color(0.2, 0.9, 0.3, 1.0)
+
+[node name="Info" type="VBoxContainer" parent="RecoveryShopOverlay/Center/ShopPanel/Margin/VBox/HealthCard/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="NameLabel" type="Label" parent="RecoveryShopOverlay/Center/ShopPanel/Margin/VBox/HealthCard/HBox/Info"]
+layout_mode = 2
+text = "HEALTH PACK"
+theme_override_font_sizes/font_size = 18
+
+[node name="StatsLabel" type="Label" parent="RecoveryShopOverlay/Center/ShopPanel/Margin/VBox/HealthCard/HBox/Info"]
+layout_mode = 2
+text = "+50 HP  •  40 coins"
+theme_override_font_sizes/font_size = 14
+modulate = Color(0.7, 0.7, 0.7, 1.0)
+
+[node name="HealthBuyBtn" type="Button" parent="RecoveryShopOverlay/Center/ShopPanel/Margin/VBox/HealthCard/HBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(100, 40)
+text = "BUY 40c"
+
+[node name="ShieldCard" type="PanelContainer" parent="RecoveryShopOverlay/Center/ShopPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_weapon_card")
+
+[node name="HBox" type="HBoxContainer" parent="RecoveryShopOverlay/Center/ShopPanel/Margin/VBox/ShieldCard"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ColorRect" type="ColorRect" parent="RecoveryShopOverlay/Center/ShopPanel/Margin/VBox/ShieldCard/HBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(8, 0)
+color = Color(0.3, 0.6, 1.0, 1.0)
+
+[node name="Info" type="VBoxContainer" parent="RecoveryShopOverlay/Center/ShopPanel/Margin/VBox/ShieldCard/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="NameLabel" type="Label" parent="RecoveryShopOverlay/Center/ShopPanel/Margin/VBox/ShieldCard/HBox/Info"]
+layout_mode = 2
+text = "SHIELD"
+theme_override_font_sizes/font_size = 18
+
+[node name="StatsLabel" type="Label" parent="RecoveryShopOverlay/Center/ShopPanel/Margin/VBox/ShieldCard/HBox/Info"]
+layout_mode = 2
+text = "+100 Shield  •  75 coins"
+theme_override_font_sizes/font_size = 14
+modulate = Color(0.7, 0.7, 0.7, 1.0)
+
+[node name="ShieldBuyBtn" type="Button" parent="RecoveryShopOverlay/Center/ShopPanel/Margin/VBox/ShieldCard/HBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(100, 40)
+text = "BUY 75c"
+
+[node name="CloseRecoveryBtn" type="Button" parent="RecoveryShopOverlay/Center/ShopPanel/Margin/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 36)
+text = "CLOSE"
+modulate = Color(0.7, 0.7, 0.7, 1.0)
+
 [node name="BuildPicker" type="PanelContainer" parent="."]
 visible = false
 layout_mode = 0
@@ -652,4 +794,7 @@ text = "ERASE  +10c"
 [connection signal="pressed" from="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/RifleCard/HBox/RifleBuyBtn"     to="." method="_on_shop_rifle_pressed"]
 [connection signal="pressed" from="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/LmgCard/HBox/LmgBuyBtn"        to="." method="_on_shop_lmg_pressed"]
 [connection signal="pressed" from="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/CloseShopBtn"                   to="." method="_on_close_shop_pressed"]
+[connection signal="pressed" from="RecoveryShopOverlay/Center/ShopPanel/Margin/VBox/HealthCard/HBox/HealthBuyBtn" to="." method="_on_recovery_health_pressed"]
+[connection signal="pressed" from="RecoveryShopOverlay/Center/ShopPanel/Margin/VBox/ShieldCard/HBox/ShieldBuyBtn" to="." method="_on_recovery_shield_pressed"]
+[connection signal="pressed" from="RecoveryShopOverlay/Center/ShopPanel/Margin/VBox/CloseRecoveryBtn"             to="." method="_on_close_recovery_pressed"]
 

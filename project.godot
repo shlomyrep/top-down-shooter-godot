@@ -15,16 +15,18 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="Resistance"
-run/main_scene="res://scenes/main.tscn"
+run/main_scene="res://scenes/splash_screen.tscn"
 config/features=PackedStringArray("4.6")
 config/icon="res://icon.svg"
 
 [autoload]
 
+GameData="*res://scripts/game_data.gd"
 WaveManager="*res://scripts/wave_manager.gd"
 WeaponManager="*res://scripts/weapon_manager.gd"
 BuildManager="*res://scripts/build_manager.gd"
 SupportManager="*res://scripts/support_manager.gd"
+NetworkManager="*res://scripts/network_manager.gd"
 
 [display]
 

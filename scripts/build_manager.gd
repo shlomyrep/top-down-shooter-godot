@@ -104,7 +104,8 @@ func _bfs_add(cell: Vector2i, visited: Dictionary, queue: Array) -> void:
 
 ## Returns Array of {cell: Vector2i, type: String} for the perimeter ring of a
 ## square with the given odd side length centered on `center`.
-## Corner cells become "tower"; all other perimeter cells become "wall".
+## Corner cells become "tower"; middle of each side becomes "door"; all other
+## perimeter cells become "wall".
 ## Cells outside the arena bounds are skipped.
 func get_template_cells(center: Vector2i, size: int) -> Array:
 	var half: int = size / 2
@@ -119,7 +120,21 @@ func get_template_cells(center: Vector2i, size: int) -> Array:
 			if cell.x < 0 or cell.x >= ARENA_COLS or cell.y < 0 or cell.y >= ARENA_ROWS:
 				continue
 			var is_corner := (dx == 0 or dx == size - 1) and (dy == 0 or dy == size - 1)
-			result.append({"cell": cell, "type": "tower" if is_corner else "wall"})
+			# Door in the middle of each side
+			var is_door := (not is_corner) and (
+				(dy == 0       and dx == half) or
+				(dy == size-1  and dx == half) or
+				(dx == 0       and dy == half) or
+				(dx == size-1  and dy == half)
+			)
+			var cell_type: String
+			if is_corner:
+				cell_type = "tower"
+			elif is_door:
+				cell_type = "door"
+			else:
+				cell_type = "wall"
+			result.append({"cell": cell, "type": cell_type})
 	return result
 
 ## Sum the cost of all unoccupied cells in a template cell list.

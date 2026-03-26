@@ -1,0 +1,260 @@
+[gd_scene format=3 uid="uid://lobby001"]
+
+[ext_resource type="Script" path="res://scripts/lobby.gd" id="1_lobby"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_header"]
+bg_color = Color(0.05, 0.06, 0.14, 0.97)
+border_width_bottom = 2
+border_color = Color(0.2, 0.3, 0.55, 0.7)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_friends"]
+bg_color = Color(0.05, 0.06, 0.13, 0.85)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_left = 8
+corner_radius_bottom_right = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_slot_default"]
+bg_color = Color(0.08, 0.1, 0.18, 0.9)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_left = 10
+corner_radius_bottom_right = 10
+border_width_bottom = 1
+border_width_top = 1
+border_width_left = 1
+border_width_right = 1
+border_color = Color(0.28, 0.35, 0.6, 0.55)
+
+[node name="Lobby" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_lobby")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.04, 0.04, 0.1, 1.0)
+
+[node name="Header" type="PanelContainer" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+offset_bottom = 56
+theme_override_styles/panel = SubResource("StyleBoxFlat_header")
+
+[node name="HeaderMargin" type="MarginContainer" parent="Header"]
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_bottom = 0
+
+[node name="HeaderHBox" type="HBoxContainer" parent="Header/HeaderMargin"]
+
+[node name="LobbyTitle" type="Label" parent="Header/HeaderMargin/HeaderHBox"]
+size_flags_horizontal = 3
+text = "MULTIPLAYER LOBBY"
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(0.88, 0.9, 1.0, 1.0)
+
+[node name="ConnectionLabel" type="Label" parent="Header/HeaderMargin/HeaderHBox"]
+text = "OFFLINE MODE"
+horizontal_alignment = 2
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.58, 0.6, 0.72, 1.0)
+
+[node name="MainVBox" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20
+offset_top = 64
+offset_right = -20
+offset_bottom = -12
+theme_override_constants/separation = 14
+
+[node name="SlotRow" type="HBoxContainer" parent="MainVBox"]
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+
+[node name="MySlot" type="PanelContainer" parent="MainVBox/SlotRow"]
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_slot_default")
+
+[node name="SlotMargin" type="MarginContainer" parent="MainVBox/SlotRow/MySlot"]
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="SlotVBox" type="VBoxContainer" parent="MainVBox/SlotRow/MySlot/SlotMargin"]
+alignment = 1
+theme_override_constants/separation = 8
+
+[node name="AvatarLabel" type="Label" parent="MainVBox/SlotRow/MySlot/SlotMargin/SlotVBox"]
+text = "✊"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 52
+
+[node name="NameLabel" type="Label" parent="MainVBox/SlotRow/MySlot/SlotMargin/SlotVBox"]
+text = "SURVIVOR"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.9, 0.92, 1.0, 1.0)
+
+[node name="StatusLabel" type="Label" parent="MainVBox/SlotRow/MySlot/SlotMargin/SlotVBox"]
+text = "YOU"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.28, 0.88, 0.38, 1.0)
+
+[node name="PartnerSlot" type="PanelContainer" parent="MainVBox/SlotRow"]
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_slot_default")
+
+[node name="SlotMargin" type="MarginContainer" parent="MainVBox/SlotRow/PartnerSlot"]
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="SlotVBox" type="VBoxContainer" parent="MainVBox/SlotRow/PartnerSlot/SlotMargin"]
+alignment = 1
+theme_override_constants/separation = 8
+
+[node name="AvatarLabel" type="Label" parent="MainVBox/SlotRow/PartnerSlot/SlotMargin/SlotVBox"]
+text = "?"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 52
+theme_override_colors/font_color = Color(0.45, 0.48, 0.72, 0.75)
+
+[node name="NameLabel" type="Label" parent="MainVBox/SlotRow/PartnerSlot/SlotMargin/SlotVBox"]
+text = "WAITING..."
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.5, 0.52, 0.72, 0.8)
+
+[node name="StatusLabel" type="Label" parent="MainVBox/SlotRow/PartnerSlot/SlotMargin/SlotVBox"]
+text = "EMPTY SLOT"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.42, 0.45, 0.62, 0.8)
+
+[node name="FindBtn" type="Button" parent="MainVBox/SlotRow/PartnerSlot/SlotMargin/SlotVBox"]
+text = "🔍  FIND CO-OP PARTNER"
+theme_override_font_sizes/font_size = 15
+
+[node name="FriendsSection" type="PanelContainer" parent="MainVBox"]
+theme_override_styles/panel = SubResource("StyleBoxFlat_friends")
+
+[node name="FriendsMargin" type="MarginContainer" parent="MainVBox/FriendsSection"]
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="FriendsVBox" type="VBoxContainer" parent="MainVBox/FriendsSection/FriendsMargin"]
+theme_override_constants/separation = 8
+
+[node name="FriendsTitle" type="Label" parent="MainVBox/FriendsSection/FriendsMargin/FriendsVBox"]
+text = "FRIENDS"
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.48, 0.55, 0.75, 1.0)
+
+[node name="Friend1" type="HBoxContainer" parent="MainVBox/FriendsSection/FriendsMargin/FriendsVBox"]
+theme_override_constants/separation = 10
+
+[node name="Dot1" type="Label" parent="MainVBox/FriendsSection/FriendsMargin/FriendsVBox/Friend1"]
+text = "●"
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 10
+theme_override_colors/font_color = Color(0.38, 0.4, 0.55, 1.0)
+
+[node name="Name1" type="Label" parent="MainVBox/FriendsSection/FriendsMargin/FriendsVBox/Friend1"]
+size_flags_horizontal = 3
+text = "Ghost_77"
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.55, 0.6, 0.75, 0.85)
+
+[node name="Status1" type="Label" parent="MainVBox/FriendsSection/FriendsMargin/FriendsVBox/Friend1"]
+text = "OFFLINE"
+horizontal_alignment = 2
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.38, 0.4, 0.55, 0.75)
+
+[node name="Friend2" type="HBoxContainer" parent="MainVBox/FriendsSection/FriendsMargin/FriendsVBox"]
+theme_override_constants/separation = 10
+
+[node name="Dot2" type="Label" parent="MainVBox/FriendsSection/FriendsMargin/FriendsVBox/Friend2"]
+text = "●"
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 10
+theme_override_colors/font_color = Color(0.38, 0.4, 0.55, 1.0)
+
+[node name="Name2" type="Label" parent="MainVBox/FriendsSection/FriendsMargin/FriendsVBox/Friend2"]
+size_flags_horizontal = 3
+text = "IronFist"
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.55, 0.6, 0.75, 0.85)
+
+[node name="Status2" type="Label" parent="MainVBox/FriendsSection/FriendsMargin/FriendsVBox/Friend2"]
+text = "OFFLINE"
+horizontal_alignment = 2
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.38, 0.4, 0.55, 0.75)
+
+[node name="Friend3" type="HBoxContainer" parent="MainVBox/FriendsSection/FriendsMargin/FriendsVBox"]
+theme_override_constants/separation = 10
+
+[node name="Dot3" type="Label" parent="MainVBox/FriendsSection/FriendsMargin/FriendsVBox/Friend3"]
+text = "●"
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 10
+theme_override_colors/font_color = Color(0.22, 0.88, 0.38, 1.0)
+
+[node name="Name3" type="Label" parent="MainVBox/FriendsSection/FriendsMargin/FriendsVBox/Friend3"]
+size_flags_horizontal = 3
+text = "NightOwl"
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.72, 0.78, 0.92, 1.0)
+
+[node name="Status3" type="Label" parent="MainVBox/FriendsSection/FriendsMargin/FriendsVBox/Friend3"]
+text = "ONLINE"
+horizontal_alignment = 2
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.22, 0.88, 0.38, 1.0)
+
+[node name="BottomButtons" type="HBoxContainer" parent="MainVBox"]
+theme_override_constants/separation = 12
+
+[node name="BackBtn" type="Button" parent="MainVBox/BottomButtons"]
+text = "← BACK"
+
+[node name="BottomSpacer" type="Control" parent="MainVBox/BottomButtons"]
+size_flags_horizontal = 3
+
+[node name="ReadyBtn" type="Button" parent="MainVBox/BottomButtons"]
+text = "READY"
+
+[node name="StartBtn" type="Button" parent="MainVBox/BottomButtons"]
+text = "▶  START GAME"
+disabled = true
+
+[node name="SearchTimer" type="Timer" parent="."]
+one_shot = true
+
+[connection signal="pressed" from="MainVBox/SlotRow/PartnerSlot/SlotMargin/SlotVBox/FindBtn" to="." method="_on_find_btn_pressed"]
+[connection signal="pressed" from="MainVBox/BottomButtons/ReadyBtn" to="." method="_on_ready_btn_pressed"]
+[connection signal="pressed" from="MainVBox/BottomButtons/StartBtn" to="." method="_on_start_btn_pressed"]
+[connection signal="pressed" from="MainVBox/BottomButtons/BackBtn" to="." method="_on_back_btn_pressed"]
+[connection signal="timeout" from="SearchTimer" to="." method="_on_search_timer_timeout"]

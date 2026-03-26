@@ -4,6 +4,10 @@ const ARENA_WIDTH := 3200
 const ARENA_HEIGHT := 2400
 const STORY_DURATION  := 3.0
 const BUILD_DURATION  := 30.0
+const RECOVERY_ITEMS := {
+	"health": {"amount": 50, "cost": 40},
+	"shield": {"amount": 100, "cost": 75},
+}
 
 @export var enemy_scene: PackedScene
 @export var spawn_interval := 2.0
@@ -16,6 +20,7 @@ const BUILD_DURATION  := 30.0
 
 var coin_scene:           PackedScene = preload("res://scenes/coin.tscn")
 var buy_station_scene:    PackedScene = preload("res://scenes/buy_station.tscn")
+var recovery_station_scene: PackedScene = preload("res://scenes/recovery_station.tscn")
 var wall_scene:           PackedScene = preload("res://scenes/wall.tscn")
 var door_scene:           PackedScene = preload("res://scenes/door.tscn")
 var tower_scene:          PackedScene = preload("res://scenes/defense_tower.tscn")
@@ -41,6 +46,7 @@ var _current_template_size: String = "small"
 var _template_preview: Node2D
 var _template_preview_cells: Array = []
 var _current_buy_station: Node = null
+var _current_recovery_station: Node = null
 var _picker_cell: Vector2i
 var _touch_joy := {}        # finger_index → {"side": "move"|"aim", "origin": Vector2}
 var _mouse_joy_side := ""
@@ -81,9 +87,19 @@ func _ready() -> void:
 		_template_preview.add_child(p)
 		_template_preview_cells.append(p)
 
+	# Reset autoload state so restarts begin fresh
+	BuildManager.occupied_cells.clear()
+	BuildManager.interior_cells.clear()
+	BuildManager.reserved_cells.clear()
+	BuildManager.build_mode = false
+	BuildManager.selected = "wall"
+	WeaponManager.current_weapon = "pistol"
+
 	spawn_timer.wait_time = spawn_interval
 	player.health_changed.connect(_on_player_health_changed)
+	player.died.connect(_on_player_died)
 	_on_player_health_changed(player.health, player.max_health)
+	player.shield_changed.connect(_on_player_shield_changed)
 
 	_move_joy = hud.get_node("MoveJoystick")
 	_aim_joy = hud.get_node("AimJoystick")
@@ -94,6 +110,7 @@ func _ready() -> void:
 	_place_buy_stations()
 	hud.buy_pressed.connect(_on_hud_buy_pressed)
 	hud.weapon_shop_buy.connect(_on_weapon_shop_buy)
+	hud.recovery_shop_buy.connect(_on_recovery_shop_buy)
 	player.weapon_changed.connect(hud.update_weapon)
 	hud.update_weapon(WeaponManager.get_current()["name"])
 	hud.build_ready_pressed.connect(_on_build_ready_pressed)
@@ -108,6 +125,8 @@ func _ready() -> void:
 	hud.shield_squad_pressed.connect(_on_shield_squad_pressed)
 	SupportManager.cooldowns_updated.connect(_on_support_cooldowns_updated)
 	_begin_wave(wave)
+	if GameData.is_multiplayer:
+		_init_multiplayer()
 
 func _place_buy_stations() -> void:
 	var station := buy_station_scene.instantiate()
@@ -115,13 +134,20 @@ func _place_buy_stations() -> void:
 	# Snap to exact cell center so the shop occupies exactly one tile
 	var shop_cell := Vector2i(20, 13)
 	station.global_position = BuildManager.cell_to_world(shop_cell)
-	station.get_node("NameLabel").text = "WEAPON SHOP"
-	station.get_node("CostLabel").text = "WALK IN"
 	station.player_entered.connect(_on_buy_station_entered)
 	station.player_exited.connect(_on_buy_station_exited)
 	add_child(station)
 	# Reserve the shop cell so nothing can be built on it
 	BuildManager.reserve_cell(shop_cell)
+
+	# Place recovery station on the opposite side of the map
+	var rec_station := recovery_station_scene.instantiate()
+	var rec_cell := Vector2i(10, 20)
+	rec_station.global_position = BuildManager.cell_to_world(rec_cell)
+	rec_station.player_entered.connect(_on_recovery_station_entered)
+	rec_station.player_exited.connect(_on_recovery_station_exited)
+	add_child(rec_station)
+	BuildManager.reserve_cell(rec_cell)
 
 func _on_buy_station_entered(station: Node) -> void:
 	_current_buy_station = station
@@ -130,6 +156,33 @@ func _on_buy_station_entered(station: Node) -> void:
 func _on_buy_station_exited() -> void:
 	_current_buy_station = null
 	hud.hide_weapon_shop()
+
+func _on_recovery_station_entered(_station: Node) -> void:
+	_current_recovery_station = _station
+	hud.show_recovery_shop(coins, player.health, player.max_health, player.shield)
+
+func _on_recovery_station_exited() -> void:
+	_current_recovery_station = null
+	hud.hide_recovery_shop()
+
+func _on_recovery_shop_buy(item_id: String) -> void:
+	var item: Dictionary = RECOVERY_ITEMS[item_id]
+	if coins < item["cost"]:
+		return
+	match item_id:
+		"health":
+			if player.health >= player.max_health:
+				return
+			coins -= item["cost"]
+			hud.update_coins(coins)
+			player.heal(item["amount"])
+		"shield":
+			if player.shield >= player.max_shield:
+				return
+			coins -= item["cost"]
+			hud.update_coins(coins)
+			player.add_shield(item["amount"])
+	hud.show_recovery_shop(coins, player.health, player.max_health, player.shield)
 
 func _on_hud_buy_pressed() -> void:
 	pass  # legacy — kept for signal compat
@@ -595,6 +648,17 @@ func _try_place_template() -> void:
 func _on_player_health_changed(current: int, maximum: int) -> void:
 	hud.update_health(current, maximum)
 
+func _on_player_shield_changed(current: int, maximum: int) -> void:
+	hud.update_shield(current, maximum)
+
+func _on_player_died() -> void:
+	spawn_timer.stop()
+	_between_wave_timer.stop()
+	_build_timer.stop()
+	GameData.save_if_record(wave)
+	await get_tree().create_timer(1.2).timeout
+	get_tree().change_scene_to_file("res://scenes/game_over.tscn")
+
 # ─── Support callables ────────────────────────────────────────────────────────
 
 func _on_airstrike_pressed() -> void:
@@ -645,3 +709,68 @@ func _on_support_cooldowns_updated() -> void:
 		SupportManager.shield_squad_cd,
 		SupportManager.SHIELD_SQUAD_COOLDOWN
 	)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── Co-op multiplayer ─────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+
+var _remote_player_node: Node2D = null
+var _partner_down_label: Label  = null
+
+const _remote_player_scene := preload("res://scenes/remote_player.tscn")
+
+func _init_multiplayer() -> void:
+	# Spawn remote player visual
+	_remote_player_node = _remote_player_scene.instantiate()
+	_remote_player_node.global_position = Vector2(ARENA_WIDTH * 0.5, ARENA_HEIGHT * 0.5)
+	add_child(_remote_player_node)
+
+	# HUD label for partner events (hidden initially)
+	_partner_down_label = Label.new()
+	_partner_down_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_partner_down_label.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
+	_partner_down_label.size = Vector2(600.0, 80.0)
+	_partner_down_label.position = Vector2(340.0, 300.0)
+	_partner_down_label.visible = false
+	var ls := LabelSettings.new()
+	ls.font_size    = 32
+	ls.font_color   = Color(1.0, 0.3, 0.3, 1.0)
+	ls.outline_size  = 3
+	ls.outline_color = Color(0.0, 0.0, 0.0, 0.9)
+	_partner_down_label.label_settings = ls
+	$UILayer.add_child(_partner_down_label)
+
+	# Wire NetworkManager signals to handlers in this scene
+	NetworkManager.remote_player_state.connect(_on_remote_player_state)
+	NetworkManager.remote_bullet_fired.connect(_on_remote_bullet_fired)
+	NetworkManager.partner_died.connect(_on_partner_died)
+	NetworkManager.partner_disconnected.connect(_on_partner_disconnected)
+
+func _on_remote_player_state(data: Dictionary) -> void:
+	if _remote_player_node and is_instance_valid(_remote_player_node):
+		_remote_player_node.apply_state(data)
+
+func _on_remote_bullet_fired(data: Dictionary) -> void:
+	var bullet: Area2D = (preload("res://scenes/bullet.tscn")).instantiate() as Area2D
+	bullet.global_position = Vector2(float(data.get("x", 0.0)), float(data.get("y", 0.0)))
+	bullet.rotation        = float(data.get("rot", 0.0))
+	bullet.damage          = int(data.get("dmg", 20))
+	bullet.speed           = float(data.get("spd", 900.0))
+	bullet.hit_color       = Color.from_string(str(data.get("color", "ffffff")), Color.WHITE)
+	bullet.bullet_scale    = float(data.get("scale", 1.0))
+	add_child(bullet)
+
+func _on_partner_died() -> void:
+	_show_partner_event("⚠  PARTNER DOWN  –  GAME OVER")
+	await get_tree().create_timer(2.5).timeout
+	_on_player_died()
+
+func _on_partner_disconnected() -> void:
+	_show_partner_event("⚡  PARTNER DISCONNECTED")
+	await get_tree().create_timer(2.5).timeout
+	_on_player_died()
+
+func _show_partner_event(msg: String) -> void:
+	if _partner_down_label:
+		_partner_down_label.text    = msg
+		_partner_down_label.visible = true

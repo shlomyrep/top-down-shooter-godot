@@ -7,6 +7,7 @@ extends Node2D
 var direction: Vector2 = Vector2.RIGHT
 var speed := 380.0
 var wall_damage := 35
+var player_damage := 25  # separate damage value when the cannonball hits the player
 
 var _lifetime := 1.8  # seconds before auto-expire
 
@@ -26,5 +27,7 @@ func _physics_process(delta: float) -> void:
 
 func _on_hit_area_body_entered(body: Node) -> void:
 	if body.has_method("take_damage"):
-		body.take_damage(wall_damage)
+		# Use player_damage for layer-1 bodies (the player), wall_damage for structures
+		var dmg := player_damage if (body is CharacterBody2D and (body.collision_layer & 1) != 0) else wall_damage
+		body.take_damage(dmg)
 	queue_free()

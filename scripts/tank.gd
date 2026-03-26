@@ -1,82 +1,64 @@
 extends CharacterBody2D
 
 ## Tank — one per wave from wave 7 onward.
-## Priority: destroy towers first (one shot each), then walls, then player.
-## Body turns gradually like a real tracked vehicle (can't strafe).
-## Barrel independently sweeps smoothly to aim at the current target.
+## Body hull NEVER rotates. Only the barrel sweeps to aim at targets.
+##
+## Three states (re-evaluated every PATH_REFRESH seconds via BFS):
+##   HOLD_AND_FIRE — path to player is completely blocked by structures.
+##                   Stands still, barrel tracks nearest target, fires every 3 s.
+##   ADVANCE       — a navigable path exists but structures still present.
+##                   Follows BFS path toward player while barrel keeps firing.
+##   RAM           — no structures block the route; tank charges at full speed.
 
-@export var speed := 40.0
-@export var max_health := 1200
-@export var attack_range := 300.0
-@export var attack_cooldown_time := 4.0
-@export var contact_damage := 20
+@export var max_health           := 3600
+@export var attack_range         := 400.0
+@export var attack_cooldown_time := 3.0
+@export var contact_damage       := 60
 @export var contact_cooldown_time := 1.5
+@export var move_speed           := 55.0    # speed while navigating
+@export var ram_speed            := 130.0   # speed while charging the player
 
 var health: int
 var player: Node2D = null
 var _is_dead := false
 
-enum State {
-	APPROACH_TOWER,    ## moving toward nearest tower
-	ATTACK_ANY_TOWER,  ## standing still, shoots every tower in range without moving
-	APPROACH_WALL,     ## moving toward nearest wall
-	ATTACK_WALL,       ## standing still, shooting current wall
-	SEEK_PLAYER        ## no structures — hunt the player
-}
-var _state        := State.SEEK_PLAYER
-var _target       : Node2D = null   # primary move-to target
-var _shoot_target : Node2D = null   # node barrel is currently aimed at
-
 var _attack_timer  := 0.0
 var _contact_timer := 0.0
-# Navigation / stuck avoidance
-var _stuck_timer      := 0.0
-var _avoid_angle      := 0.0   # radians added to move direction when stuck
-var _checkpoint_pos   := Vector2.ZERO
-var _checkpoint_timer := 0.0
-const CHECKPOINT_INTERVAL := 0.5   # sample net displacement every 0.5 s
-# Log throttle
-var _log_timer   := 0.0
-const LOG_INTERVAL := 1.0
+
+## BFS navigation
+var _path: Array        = []
+var _path_blocked       := false   # true when BFS found NO route at all
+var _path_timer         := 0.0
+const PATH_REFRESH      := 3.0     # seconds between BFS recalculations
+const WAYPOINT_REACH    := 30.0    # px — when to advance to next waypoint
+
+enum State { HOLD_AND_FIRE, ADVANCE, RAM }
+var _state := State.HOLD_AND_FIRE
 
 signal died_at(pos: Vector2)
 
-# tankb.png faces UP → rotation_offset = -PI/2 to align with Godot's right-is-0°
-const BODY_ROTATION_OFFSET := -PI / 2.0
-const BODY_TURN_SPEED   := 3.0
-const BARREL_TURN_SPEED := 5.0
+const BARREL_TURN_SPEED := 6.0
 
-@onready var body_sprite  : Sprite2D    = $BodySprite
-@onready var barrel_sprite: Sprite2D    = $BarrelSprite
-@onready var health_bar   : ProgressBar = $HealthBarPivot/HealthBar
-@onready var health_bar_pivot: Node2D   = $HealthBarPivot
+@onready var body_sprite     : Sprite2D    = $BodySprite
+@onready var barrel_sprite   : Sprite2D    = $BarrelSprite
+@onready var health_bar      : ProgressBar = $HealthBarPivot/HealthBar
+@onready var health_bar_pivot: Node2D      = $HealthBarPivot
 
 var _cannonball_scene: PackedScene = preload("res://scenes/cannonball.tscn")
 
 func _ready() -> void:
-	_checkpoint_pos = global_position
 	health = max_health
 	health_bar.max_value = max_health
 	health_bar.value = health
 	health_bar.visible = false
-	print("[TANK] Spawned  pos=", global_position, "  hp=", health)
-	call_deferred("_pick_next_target")
+	# Run first BFS immediately so the tank picks its starting state.
+	call_deferred("_refresh_path_and_state")
 
-func _find_nearest_structure(type: String) -> Node2D:
-	var nearest: Node2D = null
-	var best := INF
-	for cell in BuildManager.occupied_cells:
-		var occ = BuildManager.occupied_cells[cell]
-		if not is_instance_valid(occ): continue
-		if not occ.has_meta("structure_type") or occ.get_meta("structure_type") != type: continue
-		if not occ.has_method("take_damage"): continue
-		var d := global_position.distance_to(occ.global_position)
-		if d < best:
-			best = d
-			nearest = occ
-	return nearest
+# ─────────────────────────────────────────────────────────────────────────────
+# Helpers
+# ─────────────────────────────────────────────────────────────────────────────
 
-## Returns nearest structure of 'type' that is within range_px of the tank.
+## Nearest structure of 'type' within range_px (pass INF to ignore range).
 func _find_nearest_in_range(type: String, range_px: float) -> Node2D:
 	var nearest: Node2D = null
 	var best := INF
@@ -91,37 +73,31 @@ func _find_nearest_in_range(type: String, range_px: float) -> Node2D:
 			nearest = occ
 	return nearest
 
-func _pick_next_target() -> void:
-	# Priority 1: towers
-	var tower := _find_nearest_structure("tower")
-	if tower:
-		_target = tower
-		var d := global_position.distance_to(tower.global_position)
-		if d <= attack_range:
-			_shoot_target = tower
-			_state = State.ATTACK_ANY_TOWER
-			print("[TANK] _pick \u2192 ATTACK_ANY_TOWER  tower=(", snappedf(tower.global_position.x,1.0), ",", snappedf(tower.global_position.y,1.0), ")  d=", snappedf(d,1.0))
-		else:
-			_state = State.APPROACH_TOWER
-			print("[TANK] _pick \u2192 APPROACH_TOWER  tower=(", snappedf(tower.global_position.x,1.0), ",", snappedf(tower.global_position.y,1.0), ")  d=", snappedf(d,1.0))
-		return
-	# Priority 2: walls
-	var wall := _find_nearest_structure("wall")
-	if wall:
-		_target = wall
-		var d := global_position.distance_to(wall.global_position)
-		if d <= attack_range:
-			_state = State.ATTACK_WALL
-			print("[TANK] _pick \u2192 ATTACK_WALL  wall=(", snappedf(wall.global_position.x,1.0), ",", snappedf(wall.global_position.y,1.0), ")  d=", snappedf(d,1.0))
-		else:
-			_state = State.APPROACH_WALL
-			print("[TANK] _pick \u2192 APPROACH_WALL  wall=(", snappedf(wall.global_position.x,1.0), ",", snappedf(wall.global_position.y,1.0), ")  d=", snappedf(d,1.0))
-		return
-	# Priority 3: player
-	_target       = null
-	_shoot_target = null
-	_state        = State.SEEK_PLAYER
-	print("[TANK] _pick \u2192 SEEK_PLAYER (no structures found)")
+## Returns true if any attackable structure (tower or wall) exists anywhere.
+func _any_structures_exist() -> bool:
+	for cell in BuildManager.occupied_cells:
+		var occ = BuildManager.occupied_cells[cell]
+		if not is_instance_valid(occ): continue
+		if not occ.has_meta("structure_type"): continue
+		var t: String = occ.get_meta("structure_type")
+		if (t == "tower" or t == "wall") and occ.has_method("take_damage"):
+			return true
+	return false
+
+## Highest-priority target inside attack_range: tower > wall > player.
+func _get_best_target() -> Node2D:
+	var tower := _find_nearest_in_range("tower", attack_range)
+	if tower: return tower
+	var wall := _find_nearest_in_range("wall", attack_range)
+	if wall: return wall
+	if player and is_instance_valid(player):
+		if global_position.distance_to(player.global_position) <= attack_range:
+			return player
+	return null
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Main loop
+# ─────────────────────────────────────────────────────────────────────────────
 
 func _physics_process(delta: float) -> void:
 	if _is_dead or not player or not is_instance_valid(player):
@@ -129,224 +105,179 @@ func _physics_process(delta: float) -> void:
 
 	_attack_timer  = maxf(0.0, _attack_timer - delta)
 	_contact_timer = maxf(0.0, _contact_timer - delta)
-	_log_timer    += delta
+	health_bar_pivot.rotation = -rotation  # health bar always faces up
 
-	# Periodic debug snapshot
-	if _log_timer >= LOG_INTERVAL:
-		_log_timer = 0.0
-		var tpos := "none"
-		if _target and is_instance_valid(_target):
-			tpos = str(snappedf(_target.global_position.x, 1.0)) + "," + str(snappedf(_target.global_position.y, 1.0))
-		print("[TANK] tick  state=", _state_name(),
-			"  pos=(", snappedf(global_position.x,1.0), ",", snappedf(global_position.y,1.0), ")",
-			"  target=", tpos, "  hp=", health,
-			"  atk_cd=", snappedf(_attack_timer,0.1), "  stuck=", snappedf(_stuck_timer,0.1))
+	# Periodic BFS recalculation & state decision
+	_path_timer -= delta
+	if _path_timer <= 0.0:
+		_path_timer = PATH_REFRESH
+		_refresh_path_and_state()
 
 	match _state:
-
-		# ── Move toward nearest tower ──────────────────────────────────────────
-		State.APPROACH_TOWER:
-			if not is_instance_valid(_target):
-				print("[TANK] APPROACH_TOWER: target gone \u2192 re-pick")
-				_pick_next_target(); return
-			var d := global_position.distance_to(_target.global_position)
-			if d <= attack_range:
-				_shoot_target = _find_nearest_in_range("tower", attack_range)
-				_state = State.ATTACK_ANY_TOWER
-				print("[TANK] APPROACH_TOWER \u2192 ATTACK_ANY_TOWER  d=", snappedf(d,1.0))
-				return
-			_move_toward(_target.global_position, delta)
-			barrel_sprite.rotation = lerp_angle(barrel_sprite.rotation,
-				(_target.global_position - global_position).angle(), BARREL_TURN_SPEED * delta)
-			health_bar_pivot.rotation = -rotation
-
-		# ── Stand ground, sweep barrel, shoot ANY tower in range ──────────────
-		State.ATTACK_ANY_TOWER:
+		State.HOLD_AND_FIRE:
 			velocity = Vector2.ZERO
 			move_and_slide()
-			health_bar_pivot.rotation = -rotation
-			var t := _find_nearest_in_range("tower", attack_range)
-			if t:
-				if _shoot_target != t:
-					print("[TANK] ATTACK_ANY_TOWER: barrel re-targeting \u2192 ", t.global_position)
-				_shoot_target = t
-				var aim := (_shoot_target.global_position - global_position).normalized()
-				body_sprite.rotation = lerp_angle(body_sprite.rotation,
-					aim.angle() + BODY_ROTATION_OFFSET, BODY_TURN_SPEED * delta)
-				barrel_sprite.rotation = lerp_angle(barrel_sprite.rotation,
-					aim.angle(), BARREL_TURN_SPEED * delta)
-				if _attack_timer <= 0.0:
-					print("[TANK] FIRE tower at ", _shoot_target.global_position)
-					_fire_cannonball(_shoot_target.global_position)
-					_attack_timer = attack_cooldown_time
+			_aim_and_fire(delta)
+
+		State.ADVANCE:
+			# Move along BFS path while barrel keeps firing
+			var dest: Vector2
+			if _path.is_empty():
+				dest = player.global_position
 			else:
-				var any_tower := _find_nearest_structure("tower")
-				if any_tower:
-					_target = any_tower
-					_state  = State.APPROACH_TOWER
-					print("[TANK] ATTACK_ANY_TOWER: no tower in range \u2192 APPROACH_TOWER at ", any_tower.global_position)
-				else:
-					print("[TANK] ATTACK_ANY_TOWER: all towers gone \u2192 re-pick")
-					_pick_next_target()
-
-		# ── Move toward nearest wall ───────────────────────────────────────────
-		State.APPROACH_WALL:
-			if not is_instance_valid(_target):
-				print("[TANK] APPROACH_WALL: target gone \u2192 re-pick")
-				_pick_next_target(); return
-			var d := global_position.distance_to(_target.global_position)
-			if d <= attack_range:
-				_state = State.ATTACK_WALL
-				print("[TANK] APPROACH_WALL \u2192 ATTACK_WALL  d=", snappedf(d,1.0))
-				return
-			_move_toward(_target.global_position, delta)
-			barrel_sprite.rotation = lerp_angle(barrel_sprite.rotation,
-				(_target.global_position - global_position).angle(), BARREL_TURN_SPEED * delta)
-			health_bar_pivot.rotation = -rotation
-
-		# ── Stand ground, shoot current wall ──────────────────────────────────
-		State.ATTACK_WALL:
-			if not is_instance_valid(_target):
-				print("[TANK] ATTACK_WALL: wall gone \u2192 re-pick")
-				_pick_next_target(); return
-			velocity = Vector2.ZERO
+				if global_position.distance_to(_path[0]) < WAYPOINT_REACH:
+					_path.remove_at(0)
+				dest = _path[0] if not _path.is_empty() else player.global_position
+			velocity = (dest - global_position).normalized() * move_speed
 			move_and_slide()
-			var dir := (_target.global_position - global_position).normalized()
-			body_sprite.rotation = lerp_angle(body_sprite.rotation,
-				dir.angle() + BODY_ROTATION_OFFSET, BODY_TURN_SPEED * delta)
+			_aim_and_fire(delta)
+
+		State.RAM:
+			# Charge straight at the player — barrel faces the charge direction
+			var dir := (player.global_position - global_position).normalized()
+			velocity = dir * ram_speed
+			move_and_slide()
 			barrel_sprite.rotation = lerp_angle(barrel_sprite.rotation,
 				dir.angle(), BARREL_TURN_SPEED * delta)
-			health_bar_pivot.rotation = -rotation
-			if _attack_timer <= 0.0:
-				print("[TANK] FIRE wall at ", _target.global_position)
-				_fire_cannonball(_target.global_position)
-				_attack_timer = attack_cooldown_time
 
-		# ── Chase + shoot player ───────────────────────────────────────────────
-		State.SEEK_PLAYER:
-			if _find_nearest_structure("tower") or _find_nearest_structure("wall"):
-				print("[TANK] SEEK_PLAYER: structure appeared \u2192 re-pick")
-				_pick_next_target(); return
-			var dist := global_position.distance_to(player.global_position)
-			var dir  := (player.global_position - global_position).normalized()
-			barrel_sprite.rotation = lerp_angle(barrel_sprite.rotation,
-				dir.angle(), BARREL_TURN_SPEED * delta)
-			health_bar_pivot.rotation = -rotation
-			if dist > attack_range:
-				_move_toward(player.global_position, delta)
-			else:
-				velocity = Vector2.ZERO
-				move_and_slide()
-				body_sprite.rotation = lerp_angle(body_sprite.rotation,
-					dir.angle() + BODY_ROTATION_OFFSET, BODY_TURN_SPEED * delta)
-				if _attack_timer <= 0.0:
-					print("[TANK] FIRE player")
-					_fire_cannonball(player.global_position)
-					_attack_timer = attack_cooldown_time
-
-## Anti-stuck navigation: measures net displacement over 0.5s checkpoints
-## (immune to frame-level oscillation), grows avoidance angle, gentle wall deflection.
-func _move_toward(target_pos: Vector2, delta: float) -> void:
-	var to_target     := target_pos - global_position
-	var dir_to_target := to_target.normalized()
-
-	# ── Stuck detection via 0.5 s position checkpoints ───────────────────
-	# Measuring frame-to-frame displacement is fooled by oscillation (tank
-	# bounces ±3 px/frame → always looks like it moved).  Checkpoint sampling
-	# measures net drift over a longer window.
-	_checkpoint_timer += delta
-	if _checkpoint_timer >= CHECKPOINT_INTERVAL:
-		var net_move := global_position.distance_to(_checkpoint_pos)
-		var min_move := speed * CHECKPOINT_INTERVAL * 0.2   # expect ≥20% of max speed
-		if net_move < min_move:
-			_stuck_timer += CHECKPOINT_INTERVAL
-		else:
-			_stuck_timer = maxf(0.0, _stuck_timer - CHECKPOINT_INTERVAL * 2.0)
-		_checkpoint_pos   = global_position
-		_checkpoint_timer = 0.0
-
-	# ── Grow avoidance angle: 0→90° over 2 s, flip side every 1.5 s ─────
-	if _stuck_timer > 0.4:
-		var magnitude := minf(_stuck_timer / 2.0, 1.0) * (PI * 0.5)
-		var flip      := 1.0 if int(_stuck_timer / 1.5) % 2 == 0 else -1.0
-		_avoid_angle  = magnitude * flip
-		if fmod(_stuck_timer, 1.5) < delta + 0.05:
-			print("[TANK] STUCK  timer=", snappedf(_stuck_timer, 0.1),
-				"  avoid=", snappedf(rad_to_deg(_avoid_angle), 1.0), "°")
+## Rotate barrel toward best target and fire; called every frame in HOLD and ADVANCE.
+## Body sprite is intentionally never rotated.
+func _aim_and_fire(delta: float) -> void:
+	var target := _get_best_target()
+	if target and is_instance_valid(target):
+		var dir := (target.global_position - global_position).normalized()
+		barrel_sprite.rotation = lerp_angle(barrel_sprite.rotation,
+			dir.angle(), BARREL_TURN_SPEED * delta)
+		if _attack_timer <= 0.0:
+			_fire_cannonball(target.global_position)
+			_attack_timer = attack_cooldown_time
 	else:
-		_avoid_angle = lerpf(_avoid_angle, 0.0, delta * 3.0)
+		# Idle slow sweep so barrel movement stays visible
+		barrel_sprite.rotation += delta * 0.6
 
-	# ── Gentle wall pushout (LOW weight — deflects, does not reverse) ─────
-	# Weight 1.5 caused the bug: repulsion(0,1) overpowered desire(0,-1)
-	# and sent the tank backward, preventing stuck_timer from ever firing.
-	var repulsion := Vector2.ZERO
-	for i in get_slide_collision_count():
-		repulsion += get_slide_collision(i).get_normal()
+# ─────────────────────────────────────────────────────────────────────────────
+# BFS navigation (same algorithm as bug_enemy.gd)
+# ─────────────────────────────────────────────────────────────────────────────
 
-	var move_dir := dir_to_target.rotated(_avoid_angle)
-	if repulsion.length_squared() > 0.01:
-		move_dir = (move_dir + repulsion.normalized() * 0.3).normalized()
+func _refresh_path_and_state() -> void:
+	if not player or not is_instance_valid(player):
+		return
+	var from := BuildManager.world_to_cell(global_position)
+	var to   := BuildManager.world_to_cell(player.global_position)
 
-	velocity = move_dir * speed
-	move_and_slide()
-	var travel_dir := velocity.normalized() if velocity.length_squared() > 25.0 else dir_to_target
-	body_sprite.rotation = lerp_angle(body_sprite.rotation,
-		travel_dir.angle() + BODY_ROTATION_OFFSET, BODY_TURN_SPEED * delta)
+	if from == to:
+		# Already on the player's cell — ram
+		_path         = []
+		_path_blocked = false
+		_state        = State.RAM
+		return
 
-func _state_name() -> String:
-	return State.keys()[_state]
+	var result := _bfs(from, to)
+
+	if result.is_empty():
+		# No navigable path — all routes blocked by structures
+		_path         = []
+		_path_blocked = true
+		_state        = State.HOLD_AND_FIRE
+	else:
+		_path         = result
+		_path_blocked = false
+		if _any_structures_exist():
+			# Path exists but defences still present — advance while shooting
+			_state = State.ADVANCE
+		else:
+			# Open field, nothing in the way — charge
+			_state = State.RAM
+
+func _bfs(from: Vector2i, to: Vector2i) -> Array:
+	var visited: Dictionary = {}
+	var parent:  Dictionary = {}
+	var queue: Array = [from]
+	visited[from] = true
+
+	while not queue.is_empty():
+		var cell: Vector2i = queue.pop_front()
+		if cell == to:
+			var path: Array = []
+			var c := cell
+			while c != from:
+				path.append(BuildManager.cell_to_world(c))
+				c = parent[c]
+			path.reverse()
+			return path
+
+		for nb in [Vector2i(cell.x + 1, cell.y), Vector2i(cell.x - 1, cell.y),
+				   Vector2i(cell.x, cell.y + 1), Vector2i(cell.x, cell.y - 1)]:
+			if nb.x < 0 or nb.x >= BuildManager.ARENA_COLS \
+					or nb.y < 0 or nb.y >= BuildManager.ARENA_ROWS:
+				continue
+			if visited.has(nb):
+				continue
+			var passable := true
+			if BuildManager.is_occupied(nb):
+				var structure: Node = BuildManager.occupied_cells[nb]
+				# Open doors are passable; walls, towers, closed doors block
+				if not (structure.has_method("toggle") and structure.is_open):
+					passable = false
+			if passable:
+				visited[nb] = true
+				parent[nb] = cell
+				queue.append(nb)
+
+	return []  # no path found
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Combat
+# ─────────────────────────────────────────────────────────────────────────────
 
 func _fire_cannonball(target_pos: Vector2) -> void:
 	var cb: Node2D = _cannonball_scene.instantiate()
 	cb.direction = (target_pos - global_position).normalized()
-	# Spawn BEHIND the tank so the ball always starts outside any structure's collision shape
-	cb.global_position = global_position - cb.direction * 30.0
-	cb.wall_damage = 999  # one-shots any structure
+	cb.global_position = global_position + cb.direction * 44.0
+	cb.wall_damage    = 999   # one-shots any structure
+	cb.player_damage  = 25    # quarter of player HP per hit
 	get_tree().current_scene.add_child(cb)
 
 func take_damage(amount: int) -> void:
 	if _is_dead:
 		return
 	health -= amount
-	print("[TANK] take_damage  amount=", amount, "  hp_left=", health)
-	health_bar.value = health
+	health_bar.value   = health
 	health_bar.visible = true
-	body_sprite.modulate = Color(10, 10, 10, 1)
-	var tw: Tween = create_tween()
-	tw.tween_property(body_sprite, "modulate", Color.WHITE, 0.15)
+	body_sprite.modulate   = Color(10, 10, 10, 1)
 	barrel_sprite.modulate = Color(10, 10, 10, 1)
-	var tw2: Tween = create_tween()
+	var tw  := create_tween()
+	tw.tween_property(body_sprite,   "modulate", Color.WHITE, 0.15)
+	var tw2 := create_tween()
 	tw2.tween_property(barrel_sprite, "modulate", Color.WHITE, 0.15)
 	if health <= 0:
 		_is_dead = true
-		print("[TANK] DEAD at ", global_position)
 		died_at.emit(global_position)
 		_spawn_death_effect()
 		queue_free()
 
 func _on_hit_area_body_entered(body: Node2D) -> void:
-	var is_player_body := player != null and body == player
-	if is_player_body and _contact_timer <= 0.0:
-		print("[TANK] Contact damage to player  amount=", contact_damage)
+	if player != null and body == player and _contact_timer <= 0.0:
 		body.take_damage(contact_damage)
 		_contact_timer = contact_cooldown_time
 
 func _spawn_death_effect() -> void:
 	var particles := GPUParticles2D.new()
-	particles.emitting = true
-	particles.one_shot = true
-	particles.amount = 30
-	particles.lifetime = 0.8
+	particles.emitting  = true
+	particles.one_shot  = true
+	particles.amount    = 30
+	particles.lifetime  = 0.8
 	particles.global_position = global_position
 	var mat := ParticleProcessMaterial.new()
-	mat.direction = Vector3(0, 0, 0)
-	mat.spread = 180.0
+	mat.direction            = Vector3(0, 0, 0)
+	mat.spread               = 180.0
 	mat.initial_velocity_min = 100.0
 	mat.initial_velocity_max = 260.0
-	mat.gravity = Vector3.ZERO
-	mat.scale_min = 5.0
-	mat.scale_max = 14.0
-	mat.color = Color(0.9, 0.5, 0.05, 1.0)
+	mat.gravity              = Vector3.ZERO
+	mat.scale_min            = 5.0
+	mat.scale_max            = 14.0
+	mat.color                = Color(0.9, 0.5, 0.05, 1.0)
 	particles.process_material = mat
 	particles.finished.connect(particles.queue_free)
 	get_tree().current_scene.add_child(particles)
+
