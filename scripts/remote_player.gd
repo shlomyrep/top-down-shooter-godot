@@ -14,6 +14,7 @@ var _lerp_target: Vector2
 func _ready() -> void:
 	_lerp_target = global_position
 	z_index = 1
+	add_to_group("target_players")
 	_build_visuals()
 
 func _build_visuals() -> void:
@@ -41,6 +42,7 @@ func _build_visuals() -> void:
 	_body.sprite_frames = frames
 	# Cyan tint so partner is distinguishable from the local (white) player
 	_body.modulate = Color(0.55, 0.95, 1.0, 1.0)
+	_body.scale = Vector2(0.2, 0.2)  # match player.tscn BodySprite scale
 	_body.play("idle")
 	add_child(_body)
 

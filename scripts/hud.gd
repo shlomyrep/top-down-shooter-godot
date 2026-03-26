@@ -438,3 +438,45 @@ func hide_wave_transition() -> void:
 	tween.tween_property(wave_transition_panel, "modulate", Color(1, 1, 1, 0), 0.4)
 	tween.tween_callback(wave_transition_panel.hide)
 
+# ── Co-op partner status labels (created on first use) ────────────────────────
+
+var _partner_waiting_label: Label = null
+var _partner_ready_label:   Label = null
+
+func _make_center_label(msg: String, col: Color) -> Label:
+	var lbl := Label.new()
+	lbl.text = msg
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
+	lbl.size = Vector2(700.0, 60.0)
+	lbl.position = Vector2(
+		(get_viewport_rect().size.x - 700.0) * 0.5,
+		get_viewport_rect().size.y * 0.5 - 80.0)
+	var ls := LabelSettings.new()
+	ls.font_size    = 26
+	ls.font_color   = col
+	ls.outline_size  = 2
+	ls.outline_color = Color(0.0, 0.0, 0.0, 0.85)
+	lbl.label_settings = ls
+	lbl.visible = false
+	add_child(lbl)
+	return lbl
+
+func show_partner_waiting_label() -> void:
+	if not _partner_waiting_label:
+		_partner_waiting_label = _make_center_label("⏳  Waiting for partner...", Color(1.0, 0.85, 0.2, 1.0))
+	_partner_waiting_label.visible = true
+
+func hide_partner_waiting_label() -> void:
+	if _partner_waiting_label:
+		_partner_waiting_label.visible = false
+
+func show_partner_ready_label() -> void:
+	if not _partner_ready_label:
+		_partner_ready_label = _make_center_label("✔  Partner is READY!", Color(0.3, 1.0, 0.45, 1.0))
+	_partner_ready_label.visible = true
+
+func hide_partner_ready_label() -> void:
+	if _partner_ready_label:
+		_partner_ready_label.visible = false
+

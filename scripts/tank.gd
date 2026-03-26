@@ -84,15 +84,29 @@ func _any_structures_exist() -> bool:
 			return true
 	return false
 
-## Highest-priority target inside attack_range: tower > wall > player.
+## Returns the nearest node in the "target_players" group (local + remote player).
+func _nearest_target() -> Node2D:
+	var best: Node2D = player
+	var best_dist: float = INF if not player else global_position.distance_to(player.global_position)
+	for t in get_tree().get_nodes_in_group("target_players"):
+		if not is_instance_valid(t):
+			continue
+		var d := global_position.distance_to(t.global_position)
+		if d < best_dist:
+			best_dist = d
+			best = t
+	return best
+
+## Highest-priority target inside attack_range: tower > wall > nearest player.
 func _get_best_target() -> Node2D:
 	var tower := _find_nearest_in_range("tower", attack_range)
 	if tower: return tower
 	var wall := _find_nearest_in_range("wall", attack_range)
 	if wall: return wall
-	if player and is_instance_valid(player):
-		if global_position.distance_to(player.global_position) <= attack_range:
-			return player
+	var nearest_player := _nearest_target()
+	if nearest_player and is_instance_valid(nearest_player):
+		if global_position.distance_to(nearest_player.global_position) <= attack_range:
+			return nearest_player
 	return null
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -133,8 +147,9 @@ func _physics_process(delta: float) -> void:
 			_aim_and_fire(delta)
 
 		State.RAM:
-			# Charge straight at the player — barrel faces the charge direction
-			var dir := (player.global_position - global_position).normalized()
+			# Charge straight at the nearest player — barrel faces the charge direction
+			var ram_target := _nearest_target()
+			var dir := (ram_target.global_position - global_position).normalized() if ram_target else Vector2.RIGHT
 			velocity = dir * ram_speed
 			move_and_slide()
 			barrel_sprite.rotation = lerp_angle(barrel_sprite.rotation,
@@ -162,11 +177,14 @@ func _aim_and_fire(delta: float) -> void:
 func _refresh_path_and_state() -> void:
 	if not player or not is_instance_valid(player):
 		return
+	var nav_target := _nearest_target()
+	if not nav_target:
+		return
 	var from := BuildManager.world_to_cell(global_position)
-	var to   := BuildManager.world_to_cell(player.global_position)
+	var to   := BuildManager.world_to_cell(nav_target.global_position)
 
 	if from == to:
-		# Already on the player's cell — ram
+		# Already on the target's cell — ram
 		_path         = []
 		_path_blocked = false
 		_state        = State.RAM
@@ -257,7 +275,7 @@ func take_damage(amount: int) -> void:
 		queue_free()
 
 func _on_hit_area_body_entered(body: Node2D) -> void:
-	if player != null and body == player and _contact_timer <= 0.0:
+	if body.is_in_group("target_players") and _contact_timer <= 0.0:
 		body.take_damage(contact_damage)
 		_contact_timer = contact_cooldown_time
 

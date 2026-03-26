@@ -64,6 +64,20 @@ func set_aggro(attacker: Node2D) -> void:
 	if attacker and is_instance_valid(attacker) and attacker.is_in_group("squad"):
 		_aggro_target = attacker
 
+## Returns the nearest node in the "target_players" group (local + remote player).
+## Falls back to the assigned player var if the group is empty.
+func _nearest_target() -> Node2D:
+	var best: Node2D = player
+	var best_dist: float = INF if not player else global_position.distance_to(player.global_position)
+	for t in get_tree().get_nodes_in_group("target_players"):
+		if not is_instance_valid(t):
+			continue
+		var d := global_position.distance_to(t.global_position)
+		if d < best_dist:
+			best_dist = d
+			best = t
+	return best
+
 func _physics_process(delta: float) -> void:
 	if not player or not is_instance_valid(player):
 		return
@@ -75,10 +89,10 @@ func _physics_process(delta: float) -> void:
 		_wall_target = null
 		_state = State.CHASE
 
-	# Prefer chasing the squad member that last shot us; fall back to player
+	# Prefer chasing the squad member that last shot us; fall back to nearest player
 	var focus: Node2D = _aggro_target \
 			if (_aggro_target and is_instance_valid(_aggro_target)) \
-			else player
+			else _nearest_target()
 
 	match _state:
 		State.CHASE:
@@ -161,14 +175,14 @@ func _spawn_death_effect() -> void:
 	get_tree().current_scene.add_child(particles)
 
 func _on_hit_area_body_entered(body: Node2D) -> void:
-	# Only melee-attack player and squad members; walls are handled by the state machine
-	var is_player_body := player != null and body == player
+	# Only melee-attack player(s) and squad members; walls are handled by the state machine
+	var is_player_body := body.is_in_group("target_players")
 	var is_squad_member := body.is_in_group("squad")
 	if (is_player_body or is_squad_member) and attack_cooldown.is_stopped():
 		body.take_damage(damage)
 		attack_cooldown.start()
 		body_sprite.play("attack")
-		# Knockback only applies when hitting the player
+		# Knockback only applies when hitting a player
 		if is_player_body:
 			var push_dir: Vector2 = (global_position - body.global_position).normalized()
 			_knockback_velocity = push_dir * KNOCKBACK_FORCE

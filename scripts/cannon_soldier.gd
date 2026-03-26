@@ -85,6 +85,19 @@ func _pick_next_wall() -> void:
 		print("[CANNON] _pick_next_wall → IDLE (no walls)")
 		_state = State.IDLE
 
+## Returns the nearest node in the "target_players" group (local + remote player).
+func _nearest_target() -> Node2D:
+	var best: Node2D = player
+	var best_dist: float = INF if not player else global_position.distance_to(player.global_position)
+	for t in get_tree().get_nodes_in_group("target_players"):
+		if not is_instance_valid(t):
+			continue
+		var d := global_position.distance_to(t.global_position)
+		if d < best_dist:
+			best_dist = d
+			best = t
+	return best
+
 func _physics_process(delta: float) -> void:
 	if _is_dead or not player or not is_instance_valid(player):
 		return
@@ -166,7 +179,7 @@ func take_damage(amount: int) -> void:
 
 func _on_hit_area_body_entered(body: Node2D) -> void:
 	# Contact damage — applies in all states so the soldier is dangerous up close
-	var is_player_body := player != null and body == player
+	var is_player_body := body.is_in_group("target_players")
 	if is_player_body and _contact_timer <= 0.0:
 		body.take_damage(contact_damage)
 		_contact_timer = contact_cooldown_time

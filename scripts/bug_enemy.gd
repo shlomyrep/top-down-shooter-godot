@@ -42,6 +42,19 @@ func _setup_animations() -> void:
 	body_sprite.sprite_frames = frames
 	body_sprite.play("move")
 
+## Returns the nearest node in the "target_players" group (local + remote player).
+func _nearest_target() -> Node2D:
+	var best: Node2D = player
+	var best_dist: float = INF if not player else global_position.distance_to(player.global_position)
+	for t in get_tree().get_nodes_in_group("target_players"):
+		if not is_instance_valid(t):
+			continue
+		var d := global_position.distance_to(t.global_position)
+		if d < best_dist:
+			best_dist = d
+			best = t
+	return best
+
 func _physics_process(delta: float) -> void:
 	if _is_dead or not player or not is_instance_valid(player):
 		return
@@ -52,15 +65,17 @@ func _physics_process(delta: float) -> void:
 		_recalculate_path()
 		_path_timer = PATH_REFRESH
 
+	var chase_target := _nearest_target()
+
 	# Follow path waypoints, fall back to direct movement when path is empty
 	var direction: Vector2
 	if _path.is_empty():
-		direction = (player.global_position - global_position).normalized()
+		direction = (chase_target.global_position - global_position).normalized()
 	else:
 		# Advance waypoint when close enough
 		if global_position.distance_to(_path[0]) < WAYPOINT_REACH:
 			_path.remove_at(0)
-		direction = (_path[0] if not _path.is_empty() else player.global_position) \
+		direction = (_path[0] if not _path.is_empty() else chase_target.global_position) \
 				- global_position
 		direction = direction.normalized()
 
@@ -69,13 +84,14 @@ func _physics_process(delta: float) -> void:
 	body_sprite.rotation = direction.angle()
 	health_bar_pivot.rotation = -rotation
 
-	if global_position.distance_to(player.global_position) <= explode_distance:
+	if global_position.distance_to(chase_target.global_position) <= explode_distance:
 		_explode()
 
-## Compute BFS path from current cell to player's cell, navigating around structures.
+## Compute BFS path from current cell to nearest target's cell, navigating around structures.
 func _recalculate_path() -> void:
 	var from := BuildManager.world_to_cell(global_position)
-	var to   := BuildManager.world_to_cell(player.global_position)
+	var target := _nearest_target()
+	var to   := BuildManager.world_to_cell(target.global_position if target else global_position)
 	_path = _bfs(from, to)
 
 func _bfs(from: Vector2i, to: Vector2i) -> Array:
@@ -136,10 +152,10 @@ func _explode() -> void:
 		return
 	_exploded = true
 	_is_dead = true
-	# Heavy damage to player if inside explosion radius
-	if player and is_instance_valid(player):
-		if global_position.distance_to(player.global_position) <= explode_radius:
-			player.take_damage(explode_damage)
+	# Damage all players in explosion radius
+	for t in get_tree().get_nodes_in_group("target_players"):
+		if is_instance_valid(t) and global_position.distance_to(t.global_position) <= explode_radius:
+			t.take_damage(explode_damage)
 	# Instantly remove all squad members in radius
 	for member in get_tree().get_nodes_in_group("squad_members"):
 		if is_instance_valid(member) and global_position.distance_to(member.global_position) <= explode_radius:

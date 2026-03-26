@@ -32,6 +32,7 @@ func _ready() -> void:
 	health = max_health
 	shield = 0
 	add_to_group("player")
+	add_to_group("target_players")
 	shoot_cooldown.wait_time = WeaponManager.get_current()["cooldown"]
 	_setup_animations()
 	body_sprite.animation_finished.connect(_on_animation_finished)

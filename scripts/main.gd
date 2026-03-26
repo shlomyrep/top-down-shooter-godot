@@ -54,6 +54,11 @@ var _mouse_joy_origin := Vector2.ZERO
 var _move_joy: Control
 var _aim_joy: Control
 
+# ── Co-op multiplayer state ───────────────────────────────────────────────────
+var _confirmed_kills: Dictionary = {}      # net_id → true (double-kill guard)
+var _enemy_sync_timer: float = 0.0
+const _ENEMY_SYNC_INTERVAL := 0.10
+
 func _ready() -> void:
 	_between_wave_timer = Timer.new()
 	_between_wave_timer.one_shot = true
@@ -206,8 +211,11 @@ func _begin_wave(wave_number: int) -> void:
 	_enemies_killed_this_wave = 0
 	_wave_active = true
 	_tank_spawned_this_wave = false
+	_confirmed_kills.clear()
 	spawn_timer.start()
 	hud.update_wave(wave_number)
+	if GameData.is_multiplayer and GameData.is_host:
+		NetworkManager.send_wave_event({"type": "wave_start", "wave": wave_number})
 
 # ─── Touch joystick ──────────────────────────────────────────────────────────
 
@@ -324,6 +332,18 @@ func _process(_delta: float) -> void:
 			_build_cursor.visible = true
 			_update_build_cursor()
 
+	# ── Enemy position broadcast (HOST → CLIENT, 10 Hz) ──────────────────────
+	if GameData.is_multiplayer and GameData.is_host and _wave_active:
+		_enemy_sync_timer += _delta
+		if _enemy_sync_timer >= _ENEMY_SYNC_INTERVAL:
+			_enemy_sync_timer = 0.0
+			var batch: Array = []
+			for e in get_tree().get_nodes_in_group("enemies"):
+				if is_instance_valid(e):
+					batch.append({"id": e.get_meta("net_id", ""), "x": e.global_position.x, "y": e.global_position.y})
+			if not batch.is_empty():
+				NetworkManager.send_enemies_sync(batch)
+
 func _update_build_cursor() -> void:
 	var world_pos: Vector2 = player.global_position + player.aim_direction * float(BuildManager.TILE) * 1.5
 	var cell := BuildManager.world_to_cell(world_pos)
@@ -426,6 +446,8 @@ func _try_place_at(cell: Vector2i) -> void:
 	var structure := _create_structure(BuildManager.selected, cell)
 	add_child(structure)
 	BuildManager.register(cell, structure)
+	if GameData.is_multiplayer:
+		NetworkManager.send_structure_placed(BuildManager.selected, cell.x, cell.y)
 
 func _try_erase_at(cell: Vector2i) -> void:
 	if not BuildManager.is_occupied(cell):
@@ -436,6 +458,8 @@ func _try_erase_at(cell: Vector2i) -> void:
 	coins += BuildManager.ERASE_REFUND
 	hud.update_coins(coins)
 	BuildManager.unregister(cell)
+	if GameData.is_multiplayer:
+		NetworkManager.send_structure_erased(cell.x, cell.y)
 
 func _create_structure(type: String, cell: Vector2i) -> Node:
 	var pos := BuildManager.cell_to_world(cell)
@@ -455,6 +479,8 @@ func _create_structure(type: String, cell: Vector2i) -> Node:
 	return node
 
 func _on_spawn_timer_timeout() -> void:
+	if GameData.is_multiplayer and not GameData.is_host:
+		return  # only HOST spawns enemies in co-op
 	if not _wave_active or not player:
 		return
 	var config := WaveManager.get_wave_config(wave)
@@ -497,7 +523,6 @@ func _on_spawn_timer_timeout() -> void:
 	enemy.global_position = spawn_pos
 	enemy.player = player
 	enemy.add_to_group("enemies")
-	enemy.died_at.connect(_on_enemy_died_at)
 	if is_tank:
 		enemy.max_health = (120 + int(config["health_bonus"])) * 10  # 10x cannon soldier
 		enemy.speed = 40.0  # tank stays slow regardless of wave bonus
@@ -512,6 +537,24 @@ func _on_spawn_timer_timeout() -> void:
 		enemy.speed = 120.0 + float(config["speed_bonus"])
 
 	add_child(enemy)
+
+	# Assign a network ID so both clients can reference this enemy by ID
+	var type_str := "tank" if is_tank else ("cannon" if is_cannon else ("bug" if is_bug else "skeleton"))
+	var net_id := str(randi_range(100000, 999999))
+	enemy.set_meta("net_id", net_id)
+
+	if GameData.is_multiplayer:
+		# Capture net_id for the closure
+		var _nid := net_id
+		enemy.died_at.connect(func(pos: Vector2): _on_enemy_died_host(_nid, pos))
+		NetworkManager.send_enemy_spawned({
+			"id": net_id, "type": type_str,
+			"x": spawn_pos.x, "y": spawn_pos.y,
+			"max_hp": enemy.max_health, "speed": enemy.speed
+		})
+	else:
+		enemy.died_at.connect(_on_enemy_died_at)
+
 	enemies_spawned_this_wave += 1
 
 func _on_enemy_died_at(pos: Vector2) -> void:
@@ -519,6 +562,53 @@ func _on_enemy_died_at(pos: Vector2) -> void:
 	_enemies_killed_this_wave += 1
 	_spawn_coin(pos)
 	_check_wave_complete()
+
+# ── Co-op: HOST records kill, notifies CLIENT ──────────────────────────────
+func _on_enemy_died_host(net_id: String, pos: Vector2) -> void:
+	if _confirmed_kills.has(net_id):
+		return
+	_confirmed_kills[net_id] = true
+	score += 10
+	_enemies_killed_this_wave += 1
+	_spawn_coin(pos)
+	_check_wave_complete()
+	NetworkManager.send_enemy_killed({"id": net_id, "tx": pos.x, "ty": pos.y})
+	NetworkManager.send_score_sync({"score": score})
+
+# ── Co-op: CLIENT kills an enemy locally → notify HOST ────────────────────
+func _on_client_enemy_died(net_id: String, pos: Vector2) -> void:
+	_spawn_coin(pos)
+	NetworkManager.send_enemy_killed({"id": net_id, "tx": pos.x, "ty": pos.y})
+
+# ── Co-op: HOST receives kill report from CLIENT ───────────────────────────
+func _on_remote_enemy_killed_from_client(data: Dictionary) -> void:
+	var net_id := str(data.get("id", ""))
+	if net_id.is_empty() or _confirmed_kills.has(net_id):
+		return
+	_confirmed_kills[net_id] = true
+	var e := _find_enemy_by_net_id(net_id)
+	if e and is_instance_valid(e):
+		e.queue_free()
+	score += 10
+	_enemies_killed_this_wave += 1
+	var pos := Vector2(float(data.get("tx", 0.0)), float(data.get("ty", 0.0)))
+	_spawn_coin(pos)
+	_check_wave_complete()
+	NetworkManager.send_score_sync({"score": score})
+
+# ── Co-op: CLIENT receives kill report from HOST (remove mirrored enemy) ──
+func _on_remote_enemy_killed(data: Dictionary) -> void:
+	var net_id := str(data.get("id", ""))
+	var e := _find_enemy_by_net_id(net_id)
+	if e and is_instance_valid(e):
+		e.queue_free()
+
+# ── Find an enemy node by net_id metadata ────────────────────────────────
+func _find_enemy_by_net_id(id: String) -> Node:
+	for e in get_tree().get_nodes_in_group("enemies"):
+		if is_instance_valid(e) and e.get_meta("net_id", "") == id:
+			return e
+	return null
 
 func _spawn_coin(pos: Vector2) -> void:
 	var coin := coin_scene.instantiate()
@@ -543,18 +633,25 @@ func _start_between_wave() -> void:
 	var config := WaveManager.get_wave_config(wave)
 	hud.show_wave_transition(config, STORY_DURATION)
 	_between_wave_timer.start(STORY_DURATION)
+	if GameData.is_multiplayer and GameData.is_host:
+		NetworkManager.send_wave_event({"type": "between_wave", "wave": wave})
 
 func _on_between_wave_timeout() -> void:
 	hud.hide_wave_transition()
-	hud.show_build_mode(BUILD_DURATION + float(wave) * 5.0)
+	var scaled_build := BUILD_DURATION + float(wave) * 5.0
+	hud.show_build_mode(scaled_build)
 	BuildManager.start_build_mode()
 	_build_cursor.visible = true
-	# More time per wave: base 30 s + 5 s for each completed wave
-	var scaled_build := BUILD_DURATION + float(wave) * 5.0
 	_build_timer.start(scaled_build)
 	_refresh_repair_button()
+	if GameData.is_multiplayer and GameData.is_host:
+		NetworkManager.send_wave_event({"type": "build_start", "wave": wave, "duration": scaled_build})
 
 func _on_build_timer_timeout() -> void:
+	# CLIENT waits for host's build_end wave_event — only HOST ends the build phase on timer expiry
+	if GameData.is_multiplayer and not GameData.is_host:
+		hud.show_partner_waiting_label()
+		return
 	_end_build_phase()
 
 func _end_build_phase() -> void:
@@ -569,9 +666,15 @@ func _end_build_phase() -> void:
 	spawn_interval = maxf(0.5, spawn_interval - 0.15)
 	spawn_timer.wait_time = spawn_interval
 	_begin_wave(wave)
+	if GameData.is_multiplayer and GameData.is_host:
+		NetworkManager.send_wave_event({"type": "build_end", "next_wave": wave})
 
 func _on_build_ready_pressed() -> void:
-	_end_build_phase()
+	if GameData.is_multiplayer:
+		NetworkManager.send_build_ready_vote()
+		hud.show_partner_waiting_label()
+	else:
+		_end_build_phase()
 
 func _on_build_place_pressed() -> void:
 	if BuildManager.selected == "template":
@@ -595,6 +698,8 @@ func _on_door_toggle_pressed() -> void:
 	_global_doors_open = !_global_doors_open
 	for door in get_tree().get_nodes_in_group("doors"):
 		door.toggle()
+	if GameData.is_multiplayer:
+		NetworkManager.send_door_toggled(_global_doors_open)
 
 func _on_template_size_selected(size: String) -> void:
 	_current_template_size = size
@@ -670,6 +775,8 @@ func _on_airstrike_pressed() -> void:
 	var strike := airstrike_scene.instantiate()
 	strike.global_position = player.global_position
 	add_child(strike)
+	if GameData.is_multiplayer:
+		NetworkManager.send_airstrike_used({"x": player.global_position.x, "y": player.global_position.y})
 
 # Spawns 3 regular soldiers around the player
 func _on_squad_pressed() -> void:
@@ -699,6 +806,11 @@ func _spawn_squad(count: int, shielded: bool) -> void:
 		member.shielded = shielded
 		member.add_to_group("squad_members")
 		add_child(member)
+	if GameData.is_multiplayer:
+		NetworkManager.send_squad_spawned({
+			"x": player.global_position.x, "y": player.global_position.y,
+			"count": count, "shielded": shielded
+		})
 
 func _on_support_cooldowns_updated() -> void:
 	hud.update_support_cooldowns(
@@ -746,6 +858,34 @@ func _init_multiplayer() -> void:
 	NetworkManager.partner_died.connect(_on_partner_died)
 	NetworkManager.partner_disconnected.connect(_on_partner_disconnected)
 
+	# Enemy sync
+	if GameData.is_host:
+		# Host receives kill reports from the client
+		NetworkManager.remote_enemy_killed.connect(_on_remote_enemy_killed_from_client)
+	else:
+		# Client receives spawns and kill confirmations from the host
+		NetworkManager.remote_enemy_spawned.connect(_on_remote_enemy_spawned)
+		NetworkManager.remote_enemies_sync.connect(_on_remote_enemies_sync)
+		NetworkManager.remote_enemy_killed.connect(_on_remote_enemy_killed)
+		NetworkManager.remote_score_sync.connect(_on_remote_score_sync)
+
+	# Wave events — client mirrors host's wave state
+	if not GameData.is_host:
+		NetworkManager.remote_wave_event.connect(_on_remote_wave_event)
+
+	# Build ready vote — both players handle this
+	NetworkManager.remote_build_ready_vote.connect(_on_remote_build_ready_vote)
+	NetworkManager.remote_build_end_vote.connect(_on_remote_build_end_vote)
+
+	# Structure sync
+	NetworkManager.remote_structure_placed.connect(_on_remote_structure_placed)
+	NetworkManager.remote_structure_erased.connect(_on_remote_structure_erased)
+	NetworkManager.remote_door_toggled.connect(_on_remote_door_toggled)
+
+	# Support abilities
+	NetworkManager.remote_squad_spawned.connect(_on_remote_squad_spawned)
+	NetworkManager.remote_airstrike_used.connect(_on_remote_airstrike_used)
+
 func _on_remote_player_state(data: Dictionary) -> void:
 	if _remote_player_node and is_instance_valid(_remote_player_node):
 		_remote_player_node.apply_state(data)
@@ -774,3 +914,162 @@ func _show_partner_event(msg: String) -> void:
 	if _partner_down_label:
 		_partner_down_label.text    = msg
 		_partner_down_label.visible = true
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── Co-op: Remote enemy spawn / sync / death handlers ─────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+
+## CLIENT receives a new enemy spawned by HOST — mirror it locally
+func _on_remote_enemy_spawned(data: Dictionary) -> void:
+	var type_str := str(data.get("type", "skeleton"))
+	var enemy: CharacterBody2D
+	match type_str:
+		"tank":
+			enemy = tank_scene.instantiate() as CharacterBody2D
+		"cannon":
+			enemy = cannon_soldier_scene.instantiate() as CharacterBody2D
+		"bug":
+			enemy = bug_scene.instantiate() as CharacterBody2D
+		_:
+			enemy = enemy_scene.instantiate() as CharacterBody2D
+
+	enemy.global_position = Vector2(float(data.get("x", 0.0)), float(data.get("y", 0.0)))
+	enemy.player = player
+	enemy.max_health = int(data.get("max_hp", 60))
+	enemy.speed      = float(data.get("speed", 120.0))
+	enemy.add_to_group("enemies")
+
+	var net_id := str(data.get("id", ""))
+	enemy.set_meta("net_id", net_id)
+
+	# Connect LOCAL die signal → notify host
+	var _nid := net_id
+	enemy.died_at.connect(func(pos: Vector2): _on_client_enemy_died(_nid, pos))
+
+	add_child(enemy)
+	enemies_spawned_this_wave += 1
+
+## CLIENT receives batched position updates from HOST
+func _on_remote_enemies_sync(batch: Array) -> void:
+	for entry in batch:
+		var e := _find_enemy_by_net_id(str(entry.get("id", "")))
+		if e and is_instance_valid(e):
+			var target := Vector2(float(entry.get("x", 0.0)), float(entry.get("y", 0.0)))
+			if e.global_position.distance_to(target) > 300.0:
+				e.global_position = target   # teleport if very far off
+			else:
+				e.global_position = e.global_position.lerp(target, 0.25)
+
+## CLIENT receives score from HOST
+func _on_remote_score_sync(data: Dictionary) -> void:
+	score = int(data.get("score", score))
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── Co-op: Wave state mirror (CLIENT) ─────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+
+func _on_remote_wave_event(data: Dictionary) -> void:
+	match str(data.get("type", "")):
+		"wave_start":
+			wave = int(data.get("wave", wave))
+			_wave_active = true
+			_enemies_killed_this_wave = 0
+			enemies_spawned_this_wave = 0
+			_confirmed_kills.clear()
+			hud.update_wave(wave)
+			spawn_timer.stop()  # client never spawns
+		"between_wave":
+			_wave_active = false
+			spawn_timer.stop()
+			var config := WaveManager.get_wave_config(int(data.get("wave", wave)))
+			hud.show_wave_transition(config, STORY_DURATION)
+			_between_wave_timer.start(STORY_DURATION)
+		"build_start":
+			hud.hide_wave_transition()
+			var dur := float(data.get("duration", BUILD_DURATION))
+			hud.show_build_mode(dur)
+			BuildManager.start_build_mode()
+			_build_cursor.visible = true
+			_build_timer.start(dur)
+			_refresh_repair_button()
+		"build_end":
+			wave = int(data.get("next_wave", wave))
+			spawn_interval = maxf(0.5, spawn_interval - 0.15)
+			spawn_timer.wait_time = spawn_interval
+			if BuildManager.build_mode:
+				BuildManager.end_build_mode()
+				_build_cursor.visible = false
+				_hide_template_preview()
+				hud.hide_build_mode()
+				_build_timer.stop()
+			hud.hide_partner_waiting_label()
+			_wave_active = true
+			_enemies_killed_this_wave = 0
+			enemies_spawned_this_wave = 0
+			hud.update_wave(wave)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── Co-op: Build-phase ready-vote handlers ────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+
+## One player voted ready — show a note to the other player
+func _on_remote_build_ready_vote(_data: Dictionary) -> void:
+	hud.show_partner_ready_label()
+
+## Both voted (or server timed both) → end build phase on this device
+func _on_remote_build_end_vote() -> void:
+	hud.hide_partner_waiting_label()
+	hud.hide_partner_ready_label()
+	_end_build_phase()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── Co-op: Structure sync ─────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+
+func _on_remote_structure_placed(data: Dictionary) -> void:
+	var cell := Vector2i(int(data.get("cx", 0)), int(data.get("cy", 0)))
+	if BuildManager.is_occupied(cell) or BuildManager.is_reserved(cell):
+		return
+	var s := _create_structure(str(data.get("type", "wall")), cell)
+	add_child(s)
+	BuildManager.register(cell, s)
+
+func _on_remote_structure_erased(data: Dictionary) -> void:
+	var cell := Vector2i(int(data.get("cx", 0)), int(data.get("cy", 0)))
+	if not BuildManager.is_occupied(cell):
+		return
+	var node: Node = BuildManager.occupied_cells[cell]
+	if node and is_instance_valid(node):
+		node.queue_free()
+	BuildManager.unregister(cell)
+
+func _on_remote_door_toggled(data: Dictionary) -> void:
+	_global_doors_open = bool(data.get("is_open", false))
+	for door in get_tree().get_nodes_in_group("doors"):
+		if door.is_open != _global_doors_open:
+			door.toggle()
+
+# ── Co-op: Support abilities from partner ─────────────────────────────────────
+
+## Partner spawned squad — mirror them following `_remote_player_node`
+func _on_remote_squad_spawned(data: Dictionary) -> void:
+	if not _remote_player_node or not is_instance_valid(_remote_player_node):
+		return
+	var count: int  = int(data.get("count", 3))
+	var shielded: bool = bool(data.get("shielded", false))
+	var origin := Vector2(float(data.get("x", 0.0)), float(data.get("y", 0.0)))
+	for i in count:
+		var angle := TAU * i / count
+		var offset := Vector2.RIGHT.rotated(angle) * 70.0
+		var member := squad_scene.instantiate()
+		member.global_position = origin + offset
+		member.player = _remote_player_node   # follow the partner's visual
+		member.shielded = shielded
+		member.add_to_group("squad_members")
+		add_child(member)
+
+## Partner used airstrike — spawn the visual + damage at their position
+func _on_remote_airstrike_used(data: Dictionary) -> void:
+	var strike := airstrike_scene.instantiate()
+	strike.global_position = Vector2(float(data.get("x", 0.0)), float(data.get("y", 0.0)))
+	add_child(strike)

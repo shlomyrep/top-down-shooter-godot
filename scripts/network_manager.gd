@@ -20,6 +20,24 @@ signal remote_player_state(data: Dictionary)
 signal remote_bullet_fired(data: Dictionary)
 signal partner_died
 signal partner_disconnected
+# Enemy sync
+signal remote_enemy_spawned(data: Dictionary)
+signal remote_enemies_sync(batch: Array)
+signal remote_enemy_killed(data: Dictionary)
+signal remote_enemy_hit(data: Dictionary)
+# Wave / build
+signal remote_wave_event(data: Dictionary)
+signal remote_build_ready_vote(data: Dictionary)
+signal remote_build_end_vote
+# Structure sync
+signal remote_structure_placed(data: Dictionary)
+signal remote_structure_erased(data: Dictionary)
+signal remote_door_toggled(data: Dictionary)
+# Score
+signal remote_score_sync(data: Dictionary)
+# Support abilities
+signal remote_squad_spawned(data: Dictionary)
+signal remote_airstrike_used(data: Dictionary)
 
 # ── Private state ──────────────────────────────────────────────────────────────
 var _socket:    WebSocketPeer
@@ -83,6 +101,54 @@ func send_bullet_fired(data: Dictionary) -> void:
 
 func send_player_died() -> void:
 	_emit_sio("player_died", {"room_id": _room_id})
+
+# Enemy sync (host → client)
+func send_enemy_spawned(data: Dictionary) -> void:
+	data["room_id"] = _room_id
+	_emit_sio("enemy_spawned", data)
+
+func send_enemies_sync(batch: Array) -> void:
+	_emit_sio("enemies_sync", {"room_id": _room_id, "batch": batch})
+
+func send_enemy_killed(data: Dictionary) -> void:
+	data["room_id"] = _room_id
+	_emit_sio("enemy_killed", data)
+
+func send_enemy_hit(data: Dictionary) -> void:
+	data["room_id"] = _room_id
+	_emit_sio("enemy_hit", data)
+
+# Wave / build phase
+func send_wave_event(data: Dictionary) -> void:
+	data["room_id"] = _room_id
+	_emit_sio("wave_event", data)
+
+func send_build_ready_vote() -> void:
+	_emit_sio("build_ready_vote", {"room_id": _room_id})
+
+# Structure sync
+func send_structure_placed(type: String, cx: int, cy: int) -> void:
+	_emit_sio("structure_placed", {"room_id": _room_id, "type": type, "cx": cx, "cy": cy})
+
+func send_structure_erased(cx: int, cy: int) -> void:
+	_emit_sio("structure_erased", {"room_id": _room_id, "cx": cx, "cy": cy})
+
+func send_door_toggled(is_open: bool) -> void:
+	_emit_sio("door_toggled", {"room_id": _room_id, "is_open": is_open})
+
+# Score
+func send_score_sync(data: Dictionary) -> void:
+	data["room_id"] = _room_id
+	_emit_sio("score_sync", data)
+
+# Support abilities
+func send_squad_spawned(data: Dictionary) -> void:
+	data["room_id"] = _room_id
+	_emit_sio("squad_spawned", data)
+
+func send_airstrike_used(data: Dictionary) -> void:
+	data["room_id"] = _room_id
+	_emit_sio("airstrike_used", data)
 
 # ── Godot process loop ─────────────────────────────────────────────────────────
 
@@ -173,6 +239,37 @@ func _dispatch(payload: String) -> void:
 			partner_died.emit()
 		"partner_disconnected":
 			partner_disconnected.emit()
+		# Enemy sync
+		"remote_enemy_spawned":
+			remote_enemy_spawned.emit(data)
+		"remote_enemies_sync":
+			remote_enemies_sync.emit(data.get("batch", []))
+		"remote_enemy_killed":
+			remote_enemy_killed.emit(data)
+		"remote_enemy_hit":
+			remote_enemy_hit.emit(data)
+		# Wave / build
+		"remote_wave_event":
+			remote_wave_event.emit(data)
+		"remote_build_ready_vote":
+			remote_build_ready_vote.emit(data)
+		"remote_build_end_vote":
+			remote_build_end_vote.emit()
+		# Structure sync
+		"remote_structure_placed":
+			remote_structure_placed.emit(data)
+		"remote_structure_erased":
+			remote_structure_erased.emit(data)
+		"remote_door_toggled":
+			remote_door_toggled.emit(data)
+		# Score
+		"remote_score_sync":
+			remote_score_sync.emit(data)
+		# Support abilities
+		"remote_squad_spawned":
+			remote_squad_spawned.emit(data)
+		"remote_airstrike_used":
+			remote_airstrike_used.emit(data)
 
 func _emit_sio(event_name: String, data: Dictionary) -> void:
 	if not _socket or _socket.get_ready_state() != WebSocketPeer.STATE_OPEN:
