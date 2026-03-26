@@ -30,9 +30,11 @@ var _shoot_target : Node2D = null   # node barrel is currently aimed at
 var _attack_timer  := 0.0
 var _contact_timer := 0.0
 # Navigation / stuck avoidance
-var _last_pos    := Vector2.ZERO
-var _stuck_timer := 0.0
-var _avoid_angle := 0.0   # radians added to move direction when stuck
+var _stuck_timer      := 0.0
+var _avoid_angle      := 0.0   # radians added to move direction when stuck
+var _checkpoint_pos   := Vector2.ZERO
+var _checkpoint_timer := 0.0
+const CHECKPOINT_INTERVAL := 0.5   # sample net displacement every 0.5 s
 # Log throttle
 var _log_timer   := 0.0
 const LOG_INTERVAL := 1.0
@@ -52,7 +54,7 @@ const BARREL_TURN_SPEED := 5.0
 var _cannonball_scene: PackedScene = preload("res://scenes/cannonball.tscn")
 
 func _ready() -> void:
-	_last_pos = global_position
+	_checkpoint_pos = global_position
 	health = max_health
 	health_bar.max_value = max_health
 	health_bar.value = health
@@ -242,42 +244,48 @@ func _physics_process(delta: float) -> void:
 					_fire_cannonball(player.global_position)
 					_attack_timer = attack_cooldown_time
 
-## Anti-stuck navigation: measures real displacement, grows avoidance angle,
-## and uses collision normals to steer away from walls.
+## Anti-stuck navigation: measures net displacement over 0.5s checkpoints
+## (immune to frame-level oscillation), grows avoidance angle, gentle wall deflection.
 func _move_toward(target_pos: Vector2, delta: float) -> void:
 	var to_target     := target_pos - global_position
 	var dir_to_target := to_target.normalized()
 
-	# Measure actual displacement since last frame
-	var moved        := global_position.distance_to(_last_pos)
-	var expected_min := speed * delta * 0.15   # <15% of max = effectively not moving
-	if moved < expected_min:
-		_stuck_timer += delta
-	else:
-		_stuck_timer = maxf(0.0, _stuck_timer - delta * 4.0)
-	_last_pos = global_position
+	# ── Stuck detection via 0.5 s position checkpoints ───────────────────
+	# Measuring frame-to-frame displacement is fooled by oscillation (tank
+	# bounces ±3 px/frame → always looks like it moved).  Checkpoint sampling
+	# measures net drift over a longer window.
+	_checkpoint_timer += delta
+	if _checkpoint_timer >= CHECKPOINT_INTERVAL:
+		var net_move := global_position.distance_to(_checkpoint_pos)
+		var min_move := speed * CHECKPOINT_INTERVAL * 0.2   # expect ≥20% of max speed
+		if net_move < min_move:
+			_stuck_timer += CHECKPOINT_INTERVAL
+		else:
+			_stuck_timer = maxf(0.0, _stuck_timer - CHECKPOINT_INTERVAL * 2.0)
+		_checkpoint_pos   = global_position
+		_checkpoint_timer = 0.0
 
-	# Grow avoidance angle: 0→ 90° over 2 s, flip side every 1.5 s
+	# ── Grow avoidance angle: 0→90° over 2 s, flip side every 1.5 s ─────
 	if _stuck_timer > 0.4:
 		var magnitude := minf(_stuck_timer / 2.0, 1.0) * (PI * 0.5)
 		var flip      := 1.0 if int(_stuck_timer / 1.5) % 2 == 0 else -1.0
 		_avoid_angle  = magnitude * flip
-		if fmod(_stuck_timer, 1.5) < delta + 0.02:
-			print("[TANK] STUCK  timer=", snappedf(_stuck_timer,0.1),
-				"  avoid=", snappedf(rad_to_deg(_avoid_angle),1.0), "°")
+		if fmod(_stuck_timer, 1.5) < delta + 0.05:
+			print("[TANK] STUCK  timer=", snappedf(_stuck_timer, 0.1),
+				"  avoid=", snappedf(rad_to_deg(_avoid_angle), 1.0), "°")
 	else:
 		_avoid_angle = lerpf(_avoid_angle, 0.0, delta * 3.0)
 
-	# Collect wall repulsion normals from last move_and_slide
+	# ── Gentle wall pushout (LOW weight — deflects, does not reverse) ─────
+	# Weight 1.5 caused the bug: repulsion(0,1) overpowered desire(0,-1)
+	# and sent the tank backward, preventing stuck_timer from ever firing.
 	var repulsion := Vector2.ZERO
 	for i in get_slide_collision_count():
 		repulsion += get_slide_collision(i).get_normal()
 
-	# Final move direction: desired + avoidance rotation + wall repulsion
 	var move_dir := dir_to_target.rotated(_avoid_angle)
 	if repulsion.length_squared() > 0.01:
-		move_dir = (move_dir + repulsion.normalized() * 1.5).normalized()
-		print("[TANK] Repulsion  n=", repulsion.normalized().snapped(Vector2(0.01,0.01)), "  → move_dir=", move_dir.snapped(Vector2(0.01,0.01)))
+		move_dir = (move_dir + repulsion.normalized() * 0.3).normalized()
 
 	velocity = move_dir * speed
 	move_and_slide()
