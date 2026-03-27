@@ -33,13 +33,28 @@ const _TREAD_MARKS: Array = [
 	[1480, 1140, 190, 4, -10], [1900, 1420, 200, 5, 8], [2300, 1640, 210, 4, -15],
 	[2700, 1260, 180, 5, 11], [300, 1800, 200, 4, -12], [900, 2140, 190, 5, 14],
 ]
+# Micro-cracks in the concrete: [x1, y1, x2, y2]
+const _CRACKS: Array = [
+	[240, 380, 295, 408], [680, 178, 742, 225], [1100, 520, 1176, 492],
+	[1500, 280, 1548, 338], [1900, 682, 1978, 652], [2350, 380, 2398, 440],
+	[2720, 200, 2792, 238], [480, 1100, 558, 1138], [920, 1482, 998, 1444],
+	[1448, 1162, 1528, 1198], [1880, 1458, 1958, 1488], [2582, 1362, 2648, 1400],
+	[340, 1860, 418, 1898], [780, 2102, 858, 2062], [2160, 1958, 2238, 1998],
+]
+# Tiny pebbles/stones: [x, y, radius]
+const _PEBBLES: Array = [
+	[320, 458, 3], [540, 268, 2], [762, 622, 4], [982, 382, 2], [1198, 820, 3],
+	[1442, 558, 4], [1682, 242, 2], [1922, 562, 3], [2162, 380, 2], [2378, 678, 4],
+	[2638, 262, 3], [2860, 542, 2], [420, 1258, 4], [702, 1542, 2], [1062, 1318, 3],
+	[1338, 1642, 2], [1742, 1362, 4], [2042, 1598, 3], [2338, 1278, 2], [2858, 1918, 3],
+]
 
 func _draw() -> void:
-	# --- BASE GROUND: near-black dirt ---
-	draw_rect(Rect2(0, 0, ARENA_W, ARENA_H), Color(0.102, 0.110, 0.094, 1.0))
+	# --- BASE GROUND: dark tactical concrete, just bright enough for shadows to show ---
+	draw_rect(Rect2(0, 0, ARENA_W, ARENA_H), Color(0.155, 0.165, 0.142, 1.0))
 
 	# --- ALT TILE LAYER: barely-visible warm-cool variation ---
-	var alt_color := Color(0.118, 0.125, 0.098, 1.0)
+	var alt_color := Color(0.182, 0.194, 0.168, 1.0)
 	# Use 2×2-tile blocks to give a very subtle large-grid texture without "graph paper" buzz
 	for bx in range(0, ARENA_W, TILE * 4):
 		for by in range(0, ARENA_H, TILE * 4):
@@ -47,14 +62,14 @@ func _draw() -> void:
 				draw_rect(Rect2(bx, by, TILE * 4, TILE * 4), alt_color)
 
 	# --- BATTLE DAMAGE BLOTCHES ---
-	var dmg_color := Color(0.075, 0.082, 0.063, 0.65)
+	var dmg_color := Color(0.095, 0.105, 0.082, 0.70)
 	for mark in _DAMAGE_MARKS:
 		draw_circle(Vector2(mark[0], mark[1]), float(mark[2]), dmg_color)
 		# outer halo for softer edge
-		draw_circle(Vector2(mark[0], mark[1]), float(mark[2]) * 1.4, Color(0.075, 0.082, 0.063, 0.2))
+		draw_circle(Vector2(mark[0], mark[1]), float(mark[2]) * 1.4, Color(0.100, 0.110, 0.086, 0.22))
 
 	# --- TREAD MARKS: directional scars across the ground ---
-	var tread_color := Color(0.086, 0.094, 0.075, 0.55)
+	var tread_color := Color(0.108, 0.118, 0.095, 0.60)
 	for tm in _TREAD_MARKS:
 		var cx: float = tm[0]
 		var cy: float = tm[1]
@@ -100,6 +115,9 @@ func _draw() -> void:
 	_draw_slab(Vector2(2460, 420), Vector2(120, 32),  8)
 	_draw_slab(Vector2(1020, 1700), Vector2(32, 200), -10)
 
+	# --- MICRO-DETAILS: hairline cracks + scattered pebbles ---
+	_draw_microdetails()
+
 
 func _draw_rubble(center: Vector2) -> void:
 	var c_dark  := Color(0.220, 0.200, 0.165, 1.0)
@@ -127,3 +145,23 @@ func _draw_slab(center: Vector2, size: Vector2, angle_deg: int) -> void:
 	# Top-left highlight sliver
 	draw_rect(Rect2(-size.x * 0.5 + 2, -size.y * 0.5 + 2, size.x * 0.35, 3), c_light)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func _draw_microdetails() -> void:
+	# Hairline cracks — slightly darker than floor
+	var crack_col := Color(0.110, 0.118, 0.100, 0.80)
+	for c in _CRACKS:
+		draw_line(Vector2(c[0], c[1]), Vector2(c[2], c[3]), crack_col, 1.2)
+		# Short branch off the main crack for realism
+		var mid := Vector2((c[0] + c[2]) * 0.5, (c[1] + c[3]) * 0.5)
+		var perp := (Vector2(c[2] - c[0], c[3] - c[1])).rotated(PI * 0.45).normalized()
+		draw_line(mid, mid + perp * 14.0, crack_col, 0.8)
+
+	# Tiny pebbles — slightly lighter than floor, gives stone texture feel
+	var pebble_light := Color(0.228, 0.238, 0.205, 0.90)
+	var pebble_dark  := Color(0.128, 0.138, 0.118, 0.80)
+	for p in _PEBBLES:
+		draw_circle(Vector2(p[0], p[1]), float(p[2]), pebble_dark)
+		# highlight chip on each stone
+		draw_circle(Vector2(p[0] - float(p[2]) * 0.3, p[1] - float(p[2]) * 0.3),
+				float(p[2]) * 0.45, pebble_light)

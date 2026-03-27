@@ -27,7 +27,7 @@ shader_parameter/outline_width = 1.5
 
 [sub_resource type="Gradient" id="Gradient_shadow"]
 offsets = PackedFloat32Array(0.0, 1.0)
-colors = PackedColorArray(0.15, 0.08, 0.0, 0.55, 0.15, 0.08, 0.0, 0.0)
+colors = PackedColorArray(0.04, 0.05, 0.03, 0.78, 0.04, 0.05, 0.03, 0.0)
 
 [sub_resource type="GradientTexture2D" id="GradTex_shadow_player"]
 gradient = SubResource("Gradient_shadow")
@@ -43,10 +43,13 @@ collision_mask = 34
 script = ExtResource("1_player")
 
 [node name="Shadow" type="Sprite2D" parent="."]
-position = Vector2(6, 8)
+position = Vector2(6, 10)
 texture = SubResource("GradTex_shadow_player")
-scale = Vector2(0.74, 0.38)
+scale = Vector2(1.8, 0.75)
 z_index = -1
+
+[node name="FeetSprite" type="AnimatedSprite2D" parent="."]
+scale = Vector2(0.27, 0.27)
 
 [node name="BodySprite" type="AnimatedSprite2D" parent="."]
 scale = Vector2(0.27, 0.27)

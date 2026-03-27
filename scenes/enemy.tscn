@@ -25,7 +25,7 @@ shader_parameter/outline_width = 1.5
 
 [sub_resource type="Gradient" id="Gradient_enemy_shadow"]
 offsets = PackedFloat32Array(0.0, 1.0)
-colors = PackedColorArray(0.18, 0.02, 0.02, 0.5, 0.18, 0.02, 0.02, 0.0)
+colors = PackedColorArray(0.04, 0.05, 0.03, 0.78, 0.04, 0.05, 0.03, 0.0)
 
 [sub_resource type="GradientTexture2D" id="GradTex_enemy_shadow"]
 gradient = SubResource("Gradient_enemy_shadow")
@@ -53,9 +53,9 @@ collision_mask = 37
 script = ExtResource("1_enemy")
 
 [node name="Shadow" type="Sprite2D" parent="."]
-position = Vector2(5, 7)
+position = Vector2(5, 9)
 texture = SubResource("GradTex_enemy_shadow")
-scale = Vector2(0.5, 0.25)
+scale = Vector2(1.4, 0.55)
 z_index = -1
 
 [node name="BodySprite" type="AnimatedSprite2D" parent="."]

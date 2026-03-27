@@ -9,6 +9,7 @@ var shield: int = 0
 @onready var gun_pivot := $GunPivot
 @onready var muzzle := $GunPivot/Muzzle
 @onready var body_sprite: AnimatedSprite2D = $BodySprite
+@onready var feet_sprite: AnimatedSprite2D = $FeetSprite
 @onready var shoot_cooldown := $ShootCooldown
 @onready var shield_aura := $ShieldAura
 @onready var _muzzle_flash_light := $GunPivot/Muzzle/MuzzleFlashLight
@@ -54,6 +55,7 @@ func _ready() -> void:
 	get_tree().current_scene.get_node("UILayer").add_child(_screen_flash_rect)
 
 func _setup_animations() -> void:
+	# --- Body / torso (handgun) ---
 	var frames := SpriteFrames.new()
 	var base := "res://assets/player/Top_Down_Survivor/handgun/"
 
@@ -75,6 +77,27 @@ func _setup_animations() -> void:
 
 	body_sprite.sprite_frames = frames
 	body_sprite.play("idle")
+
+	# --- Feet (legs layer drawn below body) ---
+	var fbase := "res://assets/player/Top_Down_Survivor/feet/"
+	var fframes := SpriteFrames.new()
+
+	fframes.add_animation("idle")
+	fframes.set_animation_speed("idle", 8.0)
+	fframes.add_frame("idle", load(fbase + "idle/survivor-idle_0.png"))
+
+	fframes.add_animation("walk")
+	fframes.set_animation_speed("walk", 20.0)
+	for i in 20:
+		fframes.add_frame("walk", load(fbase + "walk/survivor-walk_%d.png" % i))
+
+	fframes.add_animation("run")
+	fframes.set_animation_speed("run", 25.0)
+	for i in 20:
+		fframes.add_frame("run", load(fbase + "run/survivor-run_%d.png" % i))
+
+	feet_sprite.sprite_frames = fframes
+	feet_sprite.play("idle")
 
 func _on_animation_finished() -> void:
 	_is_shooting = false
@@ -107,8 +130,10 @@ func _physics_process(delta: float) -> void:
 			body_sprite.rotation = gun_pivot.rotation
 		if velocity.length() > 10.0:
 			body_sprite.play("move")
+			_update_feet(move_input.normalized(), velocity.length())
 		else:
 			body_sprite.play("idle")
+			_update_feet(Vector2.ZERO, 0.0)
 		return
 
 	if aim_input.length() > 0.1:
@@ -129,6 +154,20 @@ func _physics_process(delta: float) -> void:
 			body_sprite.play("move")
 		else:
 			body_sprite.play("idle")
+
+	_update_feet(move_input.normalized(), velocity.length())
+
+
+func _update_feet(move_dir: Vector2, spd: float) -> void:
+	if spd > 10.0:
+		if move_dir.length() > 0.1:
+			feet_sprite.rotation = move_dir.angle()
+		var anim := "run" if spd > speed * 0.6 else "walk"
+		if feet_sprite.animation != anim:
+			feet_sprite.play(anim)
+	else:
+		if feet_sprite.animation != "idle":
+			feet_sprite.play("idle")
 
 func shoot() -> void:
 	var w := WeaponManager.get_current()

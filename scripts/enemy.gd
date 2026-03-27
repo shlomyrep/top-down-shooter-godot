@@ -193,6 +193,26 @@ func _spawn_death_effect() -> void:
 	flash.process_material = fmat
 	flash.finished.connect(flash.queue_free)
 	get_tree().current_scene.add_child(flash)
+	_leave_bloodstain()
+
+
+func _leave_bloodstain() -> void:
+	var arena := get_tree().current_scene.get_node_or_null("Arena")
+	if not arena:
+		return
+	var stain := Polygon2D.new()
+	stain.color = Color(0.18, 0.028, 0.028, 0.80)
+	var pts := PackedVector2Array()
+	var r := 11.0 + randf() * 10.0
+	var num_pts := 9
+	for i in num_pts:
+		var angle := TAU * i / num_pts + randf_range(-0.38, 0.38)
+		var dist := r * (0.52 + randf() * 0.58)
+		pts.append(Vector2(cos(angle) * dist, sin(angle) * dist))
+	stain.polygon = pts
+	stain.position = arena.to_local(global_position)
+	stain.z_index = -1
+	arena.add_child(stain)
 
 func _on_hit_area_body_entered(body: Node2D) -> void:
 	# Only melee-attack player(s) and squad members; walls are handled by the state machine
