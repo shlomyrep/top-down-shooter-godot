@@ -1,10 +1,29 @@
-[gd_scene load_steps=8 format=3 uid="uid://main001"]
+[gd_scene load_steps=12 format=3 uid="uid://main001"]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="PackedScene" uid="uid://player001" path="res://scenes/player.tscn" id="2_player"]
 [ext_resource type="PackedScene" uid="uid://enemy001" path="res://scenes/enemy.tscn" id="3_enemy"]
 [ext_resource type="PackedScene" uid="uid://hud001" path="res://scenes/hud.tscn" id="4_hud"]
 [ext_resource type="Script" path="res://scripts/arena.gd" id="5_arena"]
+[ext_resource type="Shader" path="res://assets/shaders/vignette.gdshader" id="6_vignette"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMat_vignette"]
+shader = ExtResource("6_vignette")
+shader_parameter/vignette_strength = 0.55
+shader_parameter/vignette_radius = 0.72
+shader_parameter/vignette_softness = 0.3
+
+[sub_resource type="Gradient" id="Grad_arena_ambient"]
+offsets = PackedFloat32Array(0.0, 1.0)
+colors = PackedColorArray(1.0, 1.0, 1.0, 0.85, 1.0, 1.0, 1.0, 0.0)
+
+[sub_resource type="GradientTexture2D" id="GradTex_arena_ambient"]
+gradient = SubResource("Grad_arena_ambient")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1.0, 0.5)
+width = 512
+height = 512
 
 [sub_resource type="RectangleShape2D" id="RectShapeTop"]
 size = Vector2(3280, 40)
@@ -18,6 +37,14 @@ enemy_scene = ExtResource("3_enemy")
 
 [node name="Arena" type="Node2D" parent="."]
 script = ExtResource("5_arena")
+
+[node name="ArenaAmbient" type="PointLight2D" parent="Arena"]
+position = Vector2(1600, 1200)
+texture = SubResource("GradTex_arena_ambient")
+texture_scale = 14.0
+color = Color(1.0, 0.96, 0.82, 1.0)
+energy = 0.2
+blend_mode = 0
 
 [node name="ArenaWalls" type="StaticBody2D" parent="."]
 collision_layer = 8
@@ -45,6 +72,17 @@ position = Vector2(1600, 1200)
 [node name="SpawnTimer" type="Timer" parent="."]
 
 [node name="UILayer" type="CanvasLayer" parent="."]
+
+[node name="VignetteLayer" type="CanvasLayer" parent="."]
+layer = 10
+
+[node name="VignetteRect" type="ColorRect" parent="VignetteLayer"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = 1280.0
+offset_bottom = 720.0
+material = SubResource("ShaderMat_vignette")
+mouse_filter = 2
 
 [node name="HUD" parent="UILayer" instance=ExtResource("4_hud")]
 

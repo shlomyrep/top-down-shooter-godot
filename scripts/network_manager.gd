@@ -38,6 +38,13 @@ signal remote_score_sync(data: Dictionary)
 # Support abilities
 signal remote_squad_spawned(data: Dictionary)
 signal remote_airstrike_used(data: Dictionary)
+# Coin deduplication
+signal remote_coin_collected(data: Dictionary)
+# Revive mechanic
+signal remote_player_downed(data: Dictionary)
+signal remote_player_revived(data: Dictionary)
+# Game over sync (carries kills count)
+signal remote_game_over_sync(data: Dictionary)
 
 # ── Private state ──────────────────────────────────────────────────────────────
 var _socket:    WebSocketPeer
@@ -149,6 +156,18 @@ func send_squad_spawned(data: Dictionary) -> void:
 func send_airstrike_used(data: Dictionary) -> void:
 	data["room_id"] = _room_id
 	_emit_sio("airstrike_used", data)
+
+func send_coin_collected(net_id: String) -> void:
+	_emit_sio("coin_collected", {"room_id": _room_id, "net_id": net_id})
+
+func send_player_downed() -> void:
+	_emit_sio("player_downed", {"room_id": _room_id})
+
+func send_player_revived() -> void:
+	_emit_sio("player_revived", {"room_id": _room_id})
+
+func send_game_over_sync(kills: int) -> void:
+	_emit_sio("game_over_sync", {"room_id": _room_id, "kills": kills})
 
 # ── Godot process loop ─────────────────────────────────────────────────────────
 
@@ -270,6 +289,14 @@ func _dispatch(payload: String) -> void:
 			remote_squad_spawned.emit(data)
 		"remote_airstrike_used":
 			remote_airstrike_used.emit(data)
+		"remote_coin_collected":
+			remote_coin_collected.emit(data)
+		"remote_player_downed":
+			remote_player_downed.emit(data)
+		"remote_player_revived":
+			remote_player_revived.emit(data)
+		"remote_game_over_sync":
+			remote_game_over_sync.emit(data)
 
 func _emit_sio(event_name: String, data: Dictionary) -> void:
 	if not _socket or _socket.get_ready_state() != WebSocketPeer.STATE_OPEN:

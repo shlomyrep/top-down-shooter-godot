@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://enemy001"]
+[gd_scene load_steps=10 format=3 uid="uid://enemy001"]
 
 [ext_resource type="Script" path="res://scripts/enemy.gd" id="1_enemy"]
 
@@ -15,13 +15,59 @@ corner_radius_top_right = 2
 corner_radius_bottom_right = 2
 corner_radius_bottom_left = 2
 
+[sub_resource type="Shader" id="Shader_enemy_outline"]
+code = "shader_type canvas_item; uniform vec4 outline_color : source_color = vec4(0.8,0.19,0.19,1.0); uniform float outline_width : hint_range(0.5,4.0) = 1.5; void fragment() { vec4 color = texture(TEXTURE,UV); if(color.a>0.01){COLOR=color;return;} vec2 texel=outline_width/vec2(textureSize(TEXTURE,0)); float a=0.0; a=max(a,texture(TEXTURE,UV+vec2(texel.x,0.0)).a); a=max(a,texture(TEXTURE,UV+vec2(-texel.x,0.0)).a); a=max(a,texture(TEXTURE,UV+vec2(0.0,texel.y)).a); a=max(a,texture(TEXTURE,UV+vec2(0.0,-texel.y)).a); a=max(a,texture(TEXTURE,UV+vec2(texel.x,texel.y)).a); a=max(a,texture(TEXTURE,UV+vec2(-texel.x,texel.y)).a); a=max(a,texture(TEXTURE,UV+vec2(texel.x,-texel.y)).a); a=max(a,texture(TEXTURE,UV+vec2(-texel.x,-texel.y)).a); COLOR=vec4(outline_color.rgb,outline_color.a*a); }"
+
+[sub_resource type="ShaderMaterial" id="ShaderMat_enemy_outline"]
+shader = SubResource("Shader_enemy_outline")
+shader_parameter/outline_color = Color(0.8, 0.19, 0.19, 1.0)
+shader_parameter/outline_width = 1.5
+
+[sub_resource type="Gradient" id="Gradient_enemy_shadow"]
+offsets = PackedFloat32Array(0.0, 1.0)
+colors = PackedColorArray(0.18, 0.02, 0.02, 0.5, 0.18, 0.02, 0.02, 0.0)
+
+[sub_resource type="GradientTexture2D" id="GradTex_enemy_shadow"]
+gradient = SubResource("Gradient_enemy_shadow")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1.0, 0.5)
+width = 64
+height = 32
+
+[sub_resource type="Gradient" id="Gradient_enemy_light"]
+offsets = PackedFloat32Array(0.0, 1.0)
+colors = PackedColorArray(1.0, 1.0, 1.0, 0.85, 1.0, 1.0, 1.0, 0.0)
+
+[sub_resource type="GradientTexture2D" id="GradTex_enemy_light"]
+gradient = SubResource("Gradient_enemy_light")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1.0, 0.5)
+width = 256
+height = 256
+
 [node name="Enemy" type="CharacterBody2D"]
 collision_layer = 2
 collision_mask = 37
 script = ExtResource("1_enemy")
 
+[node name="Shadow" type="Sprite2D" parent="."]
+position = Vector2(5, 7)
+texture = SubResource("GradTex_enemy_shadow")
+scale = Vector2(0.5, 0.25)
+z_index = -1
+
 [node name="BodySprite" type="AnimatedSprite2D" parent="."]
 scale = Vector2(0.2, 0.2)
+material = SubResource("ShaderMat_enemy_outline")
+
+[node name="AmbientLight" type="PointLight2D" parent="."]
+texture = SubResource("GradTex_enemy_light")
+texture_scale = 1.8
+color = Color(0.8, 0.19, 0.19, 1.0)
+energy = 0.55
+blend_mode = 0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape2D_enemy")

@@ -11,6 +11,9 @@ var shield: int = 0
 @onready var body_sprite: AnimatedSprite2D = $BodySprite
 @onready var shoot_cooldown := $ShootCooldown
 @onready var shield_aura := $ShieldAura
+@onready var _muzzle_flash_light := $GunPivot/Muzzle/MuzzleFlashLight
+
+var _screen_flash_rect: ColorRect = null
 
 var _is_shooting := false
 
@@ -27,7 +30,11 @@ var _net_timer: float = 0.0
 signal health_changed(current: int, maximum: int)
 signal shield_changed(current: int, maximum: int)
 signal died
+signal downed  ## Multiplayer: HP hit 0 but partner may still revive
 signal weapon_changed(weapon_name: String)
+
+## True while waiting for the partner to revive (multiplayer only).
+var is_downed := false
 
 func _ready() -> void:
 	health = max_health
@@ -38,6 +45,13 @@ func _ready() -> void:
 	_setup_animations()
 	body_sprite.animation_finished.connect(_on_animation_finished)
 	shield_aura.visible = false
+	# Build the screen-damage flash overlay (full-screen red ColorRect in UI canvas)
+	_screen_flash_rect = ColorRect.new()
+	_screen_flash_rect.color = Color(0.8, 0.05, 0.05, 0.0)
+	_screen_flash_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_screen_flash_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_screen_flash_rect.z_index = 5
+	get_tree().current_scene.get_node("UILayer").add_child(_screen_flash_rect)
 
 func _setup_animations() -> void:
 	var frames := SpriteFrames.new()
@@ -66,6 +80,10 @@ func _on_animation_finished() -> void:
 	_is_shooting = false
 
 func _physics_process(delta: float) -> void:
+	if is_downed:
+		velocity = Vector2.ZERO
+		move_and_slide()
+		return
 	velocity = move_input.normalized() * speed
 	move_and_slide()
 	# Broadcast position/state to partner
@@ -136,6 +154,10 @@ func shoot() -> void:
 			})
 	_is_shooting = true
 	body_sprite.play("shoot")
+	# Muzzle flash: burst the point-light energy then tween to zero
+	_muzzle_flash_light.energy = 3.0
+	var _mf_tween := create_tween()
+	_mf_tween.tween_property(_muzzle_flash_light, "energy", 0.0, 0.08)
 
 func equip_weapon(weapon_id: String) -> void:
 	WeaponManager.equip(weapon_id)
@@ -144,6 +166,8 @@ func equip_weapon(weapon_id: String) -> void:
 	weapon_changed.emit(w["name"])
 
 func take_damage(amount: int) -> void:
+	if is_downed:
+		return  # Already downed; ignore further hits
 	if shield > 0:
 		var absorbed := mini(shield, amount)
 		shield -= absorbed
@@ -155,10 +179,19 @@ func take_damage(amount: int) -> void:
 		health_changed.emit(health, max_health)
 		_flash()
 		if health <= 0:
+			health = 0
 			if GameData.is_multiplayer:
-				NetworkManager.send_player_died()
-			died.emit()
-			get_tree().reload_current_scene()
+				downed.emit()  ## Let main.gd decide between downed vs. game-over
+			else:
+				died.emit()
+				get_tree().reload_current_scene()
+
+## Called by main.gd when the partner successfully revives this player.
+func revive(hp_pct: float = 0.5) -> void:
+	is_downed = false
+	health = maxi(1, int(max_health * hp_pct))
+	health_changed.emit(health, max_health)
+	body_sprite.play("idle")
 
 func heal(amount: int) -> void:
 	health = mini(health + amount, max_health)
@@ -176,6 +209,11 @@ func _flash() -> void:
 	body_sprite.modulate = Color(10, 10, 10, 1)
 	var tween: Tween = create_tween()
 	tween.tween_property(body_sprite, "modulate", Color.WHITE, 0.15)
+	# Full-screen red flash
+	if _screen_flash_rect:
+		_screen_flash_rect.color.a = 0.35
+		var ft := create_tween()
+		ft.tween_property(_screen_flash_rect, "color:a", 0.0, 0.28)
 
 func _broadcast_state() -> void:
 	var anim := "idle"

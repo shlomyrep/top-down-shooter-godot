@@ -150,29 +150,49 @@ func take_damage(amount: int) -> void:
 		queue_free()
 
 func _flash() -> void:
-	body_sprite.modulate = Color(10, 10, 10, 1)
 	var tween: Tween = create_tween()
-	tween.tween_property(body_sprite, "modulate", Color.WHITE, 0.12)
+	tween.tween_property(body_sprite, "modulate", Color(1.4, 0.2, 0.2, 1.0), 0.04)
+	tween.tween_property(body_sprite, "modulate", Color.WHITE, 0.08)
 
 func _spawn_death_effect() -> void:
+	# Main blood/debris burst
 	var particles := GPUParticles2D.new()
 	particles.emitting = true
 	particles.one_shot = true
-	particles.amount = 12
-	particles.lifetime = 0.4
+	particles.amount = 18
+	particles.lifetime = 0.5
 	particles.global_position = global_position
 	var mat := ParticleProcessMaterial.new()
 	mat.direction = Vector3(0, 0, 0)
 	mat.spread = 180.0
-	mat.initial_velocity_min = 60.0
-	mat.initial_velocity_max = 120.0
+	mat.initial_velocity_min = 80.0
+	mat.initial_velocity_max = 160.0
 	mat.gravity = Vector3.ZERO
 	mat.scale_min = 3.0
-	mat.scale_max = 6.0
-	mat.color = Color(1.0, 0.3, 0.2, 1.0)
+	mat.scale_max = 7.0
+	mat.color = Color(0.78, 0.12, 0.12, 1.0)
 	particles.process_material = mat
 	particles.finished.connect(particles.queue_free)
 	get_tree().current_scene.add_child(particles)
+	# Secondary flash ring
+	var flash := GPUParticles2D.new()
+	flash.emitting = true
+	flash.one_shot = true
+	flash.amount = 6
+	flash.lifetime = 0.25
+	flash.global_position = global_position
+	var fmat := ParticleProcessMaterial.new()
+	fmat.direction = Vector3(0, 0, 0)
+	fmat.spread = 180.0
+	fmat.initial_velocity_min = 30.0
+	fmat.initial_velocity_max = 55.0
+	fmat.gravity = Vector3.ZERO
+	fmat.scale_min = 6.0
+	fmat.scale_max = 12.0
+	fmat.color = Color(1.0, 0.55, 0.1, 0.85)
+	flash.process_material = fmat
+	flash.finished.connect(flash.queue_free)
+	get_tree().current_scene.add_child(flash)
 
 func _on_hit_area_body_entered(body: Node2D) -> void:
 	# Only melee-attack player(s) and squad members; walls are handled by the state machine

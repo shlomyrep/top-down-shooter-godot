@@ -13,5 +13,8 @@ func _ready() -> void:
 	tween.tween_property(self, "position:y", start_y, 0.4).set_ease(Tween.EASE_IN_OUT)
 
 func _on_body_entered(_body: Node) -> void:
+	if not is_inside_tree():
+		return
+	set_deferred("monitoring", false)  # prevent double-trigger
 	collected.emit(value)
 	queue_free()

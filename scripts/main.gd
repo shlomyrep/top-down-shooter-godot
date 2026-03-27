@@ -59,6 +59,24 @@ var _confirmed_kills: Dictionary = {}      # net_id → true (double-kill guard)
 var _enemy_sync_timer: float = 0.0
 const _ENEMY_SYNC_INTERVAL := 0.10
 
+# ── Total kills (carries into game-over screen) ───────────────────────────────
+var _total_kills: int = 0
+
+# ── Coin deduplication ───────────────────────────────────────────────────────
+# net_id → coin node so we can remove the partner's copy on collection
+var _coin_registry: Dictionary = {}
+
+# ── Partner direction indicator ───────────────────────────────────────────────
+var _partner_compass: Control = null
+
+# ── Revive mechanic ───────────────────────────────────────────────────────────
+var _partner_is_downed: bool  = false
+var _revive_fill: float       = 0.0
+const _REVIVE_DURATION        := 3.0   # seconds to hold to revive
+const _REVIVE_RADIUS          := 100.0 # pixels — how close you must stand
+var _downed_overlay: Control  = null   # shown on the downed player's screen
+var _revive_bar_container: Control = null  # shown on the alive player's screen
+
 func _ready() -> void:
 	_between_wave_timer = Timer.new()
 	_between_wave_timer.one_shot = true
@@ -103,6 +121,7 @@ func _ready() -> void:
 	spawn_timer.wait_time = spawn_interval
 	player.health_changed.connect(_on_player_health_changed)
 	player.died.connect(_on_player_died)
+	player.downed.connect(_on_player_downed)
 	_on_player_health_changed(player.health, player.max_health)
 	player.shield_changed.connect(_on_player_shield_changed)
 
@@ -344,6 +363,13 @@ func _process(_delta: float) -> void:
 			if not batch.is_empty():
 				NetworkManager.send_enemies_sync(batch)
 
+	# ── Partner compass + revive proximity (multiplayer) ────────────────────
+	if GameData.is_multiplayer and player and _remote_player_node \
+			and is_instance_valid(_remote_player_node):
+		_update_partner_compass()
+		if _partner_is_downed and not player.is_downed:
+			_update_revive_proximity(_delta)
+
 func _update_build_cursor() -> void:
 	var world_pos: Vector2 = player.global_position + player.aim_direction * float(BuildManager.TILE) * 1.5
 	var cell := BuildManager.world_to_cell(world_pos)
@@ -477,9 +503,6 @@ func _create_structure(type: String, cell: Vector2i) -> Node:
 	node.global_position = pos
 	node.set_meta("structure_type", type)
 	node.destroyed.connect(func(c: Vector2i): BuildManager.unregister(c))
-	# Sync new door to the current global door state so all doors stay aligned
-	if type == "door" and _global_doors_open:
-		node.toggle()
 	return node
 
 func _on_spawn_timer_timeout() -> void:
@@ -528,8 +551,8 @@ func _on_spawn_timer_timeout() -> void:
 	enemy.player = player
 	enemy.add_to_group("enemies")
 	if is_tank:
-		enemy.max_health = (120 + int(config["health_bonus"])) * 10  # 10x cannon soldier
-		enemy.speed = 40.0  # tank stays slow regardless of wave bonus
+		# Boss-tier health: 30× a cannon soldier so it's a genuine threat to take down
+		enemy.max_health = (120 + int(config["health_bonus"])) * 30
 	elif is_cannon:
 		enemy.max_health = 120 + int(config["health_bonus"])
 		enemy.speed = 75.0 + float(config["speed_bonus"])
@@ -564,6 +587,7 @@ func _on_spawn_timer_timeout() -> void:
 func _on_enemy_died_at(pos: Vector2) -> void:
 	score += 10
 	_enemies_killed_this_wave += 1
+	_total_kills += 1
 	_spawn_coin(pos)
 	_check_wave_complete()
 
@@ -574,14 +598,15 @@ func _on_enemy_died_host(net_id: String, pos: Vector2) -> void:
 	_confirmed_kills[net_id] = true
 	score += 10
 	_enemies_killed_this_wave += 1
-	_spawn_coin(pos)
+	_total_kills += 1
+	_spawn_coin(pos, net_id)  # use enemy net_id so partner can match it
 	_check_wave_complete()
 	NetworkManager.send_enemy_killed({"id": net_id, "tx": pos.x, "ty": pos.y})
 	NetworkManager.send_score_sync({"score": score})
 
 # ── Co-op: CLIENT kills an enemy locally → notify HOST ────────────────────
 func _on_client_enemy_died(net_id: String, pos: Vector2) -> void:
-	_spawn_coin(pos)
+	_spawn_coin(pos, net_id)  # use enemy net_id so HOST can match it
 	NetworkManager.send_enemy_killed({"id": net_id, "tx": pos.x, "ty": pos.y})
 
 # ── Co-op: HOST receives kill report from CLIENT ───────────────────────────
@@ -595,17 +620,23 @@ func _on_remote_enemy_killed_from_client(data: Dictionary) -> void:
 		e.queue_free()
 	score += 10
 	_enemies_killed_this_wave += 1
+	_total_kills += 1
 	var pos := Vector2(float(data.get("tx", 0.0)), float(data.get("ty", 0.0)))
-	_spawn_coin(pos)
+	_spawn_coin(pos, net_id)  # use enemy net_id so CLIENT can match it
 	_check_wave_complete()
 	NetworkManager.send_score_sync({"score": score})
 
-# ── Co-op: CLIENT receives kill report from HOST (remove mirrored enemy) ──
+# ── Co-op: CLIENT receives kill report from HOST (remove mirrored enemy + spawn coin) ──
 func _on_remote_enemy_killed(data: Dictionary) -> void:
 	var net_id := str(data.get("id", ""))
 	var e := _find_enemy_by_net_id(net_id)
 	if e and is_instance_valid(e):
 		e.queue_free()
+	# Spawn a coin on the CLIENT side too, using the same net_id as HOST's coin
+	# so the coin_collected broadcast can remove it from the partner's screen.
+	var pos := Vector2(float(data.get("tx", 0.0)), float(data.get("ty", 0.0)))
+	if pos != Vector2.ZERO:
+		_spawn_coin(pos, net_id)
 
 # ── Find an enemy node by net_id metadata ────────────────────────────────
 func _find_enemy_by_net_id(id: String) -> Node:
@@ -614,15 +645,31 @@ func _find_enemy_by_net_id(id: String) -> Node:
 			return e
 	return null
 
-func _spawn_coin(pos: Vector2) -> void:
+func _spawn_coin(pos: Vector2, coin_net_id: String = "") -> void:
 	var coin := coin_scene.instantiate()
 	coin.global_position = pos
-	coin.collected.connect(_on_coin_collected)
+	# In multiplayer a stable net_id (from the enemy) is passed in so both devices
+	# generate the same key and the coin_collected broadcast removes the right coin.
+	# In solo / fallback, derive a position-based key (no dedup needed).
+	var net_id := coin_net_id if coin_net_id != "" else ("solo_%.0f_%.0f" % [pos.x, pos.y])
+	_coin_registry[net_id] = coin
+	coin.collected.connect(func(amount: int): _on_coin_collected(amount, net_id))
 	add_child(coin)
 
-func _on_coin_collected(amount: int) -> void:
+func _on_coin_collected(amount: int, net_id: String = "") -> void:
 	coins += amount
 	hud.update_coins(coins)
+	_coin_registry.erase(net_id)
+	if GameData.is_multiplayer and net_id != "":
+		NetworkManager.send_coin_collected(net_id)
+
+func _on_remote_coin_collected(data: Dictionary) -> void:
+	var net_id := str(data.get("net_id", ""))
+	if _coin_registry.has(net_id):
+		var coin = _coin_registry[net_id]
+		if coin and is_instance_valid(coin):
+			coin.queue_free()
+		_coin_registry.erase(net_id)
 
 func _check_wave_complete() -> void:
 	if not _wave_active:
@@ -752,6 +799,8 @@ func _try_place_template() -> void:
 			continue
 		var structure := _create_structure(entry.type, entry.cell)
 		add_child(structure)
+		if entry.type == "door" and _global_doors_open:
+			structure.toggle()
 		BuildManager.register(entry.cell, structure)
 		if GameData.is_multiplayer:
 			NetworkManager.send_structure_placed(entry.type, entry.cell.x, entry.cell.y)
@@ -766,8 +815,32 @@ func _on_player_died() -> void:
 	spawn_timer.stop()
 	_between_wave_timer.stop()
 	_build_timer.stop()
+	GameData.my_kills = _total_kills
 	GameData.save_if_record(wave)
+	if GameData.is_multiplayer:
+		NetworkManager.send_game_over_sync(_total_kills)
 	await get_tree().create_timer(1.2).timeout
+	get_tree().change_scene_to_file("res://scenes/game_over.tscn")
+
+## Multiplayer: local player HP reached 0 — enter downed state.
+func _on_player_downed() -> void:
+	player.is_downed = true
+	if _partner_is_downed:
+		# Both players are now down → permanent game over
+		_trigger_game_over()
+	else:
+		NetworkManager.send_player_downed()
+		_show_downed_overlay()
+
+func _trigger_game_over() -> void:
+	spawn_timer.stop()
+	_between_wave_timer.stop()
+	_build_timer.stop()
+	GameData.my_kills = _total_kills
+	GameData.save_if_record(wave)
+	if GameData.is_multiplayer:
+		NetworkManager.send_game_over_sync(_total_kills)
+	await get_tree().create_timer(1.5).timeout
 	get_tree().change_scene_to_file("res://scenes/game_over.tscn")
 
 # ─── Support callables ────────────────────────────────────────────────────────
@@ -891,6 +964,15 @@ func _init_multiplayer() -> void:
 	# Support abilities
 	NetworkManager.remote_squad_spawned.connect(_on_remote_squad_spawned)
 	NetworkManager.remote_airstrike_used.connect(_on_remote_airstrike_used)
+
+	# New 4-feature events: coin dedup, downed/revive, game-over sync
+	NetworkManager.remote_coin_collected.connect(_on_remote_coin_collected)
+	NetworkManager.remote_player_downed.connect(_on_remote_player_downed)
+	NetworkManager.remote_player_revived.connect(_on_remote_player_revived)
+	NetworkManager.remote_game_over_sync.connect(_on_remote_game_over_sync)
+
+	# Partner direction compass
+	_create_partner_compass()
 
 func _on_remote_player_state(data: Dictionary) -> void:
 	if _remote_player_node and is_instance_valid(_remote_player_node):
@@ -1088,3 +1170,162 @@ func _on_remote_airstrike_used(data: Dictionary) -> void:
 	var strike := airstrike_scene.instantiate()
 	strike.global_position = Vector2(float(data.get("x", 0.0)), float(data.get("y", 0.0)))
 	add_child(strike)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── Co-op: Downed / revive / game-over events ─────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+
+## Partner went down — show their visual as downed and enable revive.
+func _on_remote_player_downed(_data: Dictionary) -> void:
+	_partner_is_downed = true
+	if _remote_player_node and is_instance_valid(_remote_player_node):
+		_remote_player_node.set_downed(true)
+
+## Partner was revived by us — clear downed state.
+func _on_remote_player_revived(_data: Dictionary) -> void:
+	_partner_is_downed = false
+	if _remote_player_node and is_instance_valid(_remote_player_node):
+		_remote_player_node.set_downed(false)
+	# If we are the downed player (partner notified us they are alive again
+	# and are now reviving us back) — handled via send_player_revived path.
+	# If local player is downed and partner sends «revived» it means they
+	# completed their revive-bar on their screen and we should stand back up.
+	if player.is_downed:
+		player.revive(0.5)
+		_hide_downed_overlay()
+
+## Partner's game permanently ended — we should also show game-over.
+func _on_remote_game_over_sync(data: Dictionary) -> void:
+	GameData.partner_kills = int(data.get("kills", 0))
+	GameData.my_kills      = _total_kills
+	GameData.save_if_record(wave)
+	spawn_timer.stop()
+	_between_wave_timer.stop()
+	_build_timer.stop()
+	await get_tree().create_timer(1.5).timeout
+	get_tree().change_scene_to_file("res://scenes/game_over.tscn")
+
+# ── Downed overlay (shown on the downed player's own screen) ─────────────────
+
+func _show_downed_overlay() -> void:
+	if _downed_overlay and is_instance_valid(_downed_overlay):
+		return
+	_downed_overlay = ColorRect.new()
+	(_downed_overlay as ColorRect).color = Color(0.0, 0.0, 0.0, 0.55)
+	_downed_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_downed_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var lbl := Label.new()
+	lbl.text = "YOU ARE DOWN\nWaiting for your partner to revive you..."
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
+	lbl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var ls := LabelSettings.new()
+	ls.font_size    = 28
+	ls.font_color   = Color(1.0, 0.3, 0.3)
+	ls.outline_size  = 3
+	ls.outline_color = Color(0.0, 0.0, 0.0, 0.9)
+	lbl.label_settings = ls
+	_downed_overlay.add_child(lbl)
+	$UILayer.add_child(_downed_overlay)
+
+func _hide_downed_overlay() -> void:
+	if _downed_overlay and is_instance_valid(_downed_overlay):
+		_downed_overlay.queue_free()
+		_downed_overlay = null
+
+# ── Revive progress bar (shown on the alive player's screen) ─────────────────
+
+func _show_revive_bar(fill: float) -> void:
+	if not _revive_bar_container or not is_instance_valid(_revive_bar_container):
+		_revive_bar_container = Control.new()
+		_revive_bar_container.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+		_revive_bar_container.position = Vector2(-200.0, -160.0)
+		_revive_bar_container.size = Vector2(400.0, 60.0)
+		_revive_bar_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var lbl := Label.new()
+		lbl.name = "ReviveLbl"
+		lbl.text = "REVIVING..."
+		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lbl.size = Vector2(400.0, 30.0)
+		var ls := LabelSettings.new()
+		ls.font_size    = 20
+		ls.font_color   = Color(0.55, 0.95, 1.0)
+		ls.outline_size  = 2
+		ls.outline_color = Color(0.0, 0.0, 0.0, 0.8)
+		lbl.label_settings = ls
+		_revive_bar_container.add_child(lbl)
+		var bar := ProgressBar.new()
+		bar.name = "Bar"
+		bar.min_value = 0.0
+		bar.max_value = 1.0
+		bar.position = Vector2(0.0, 32.0)
+		bar.size = Vector2(400.0, 24.0)
+		bar.show_percentage = false
+		_revive_bar_container.add_child(bar)
+		$UILayer.add_child(_revive_bar_container)
+	(_revive_bar_container.get_node("Bar") as ProgressBar).value = fill
+
+func _hide_revive_bar() -> void:
+	if _revive_bar_container and is_instance_valid(_revive_bar_container):
+		_revive_bar_container.queue_free()
+		_revive_bar_container = null
+
+# ── Compass helper (partner direction indicator) ─────────────────────────────
+
+func _create_partner_compass() -> void:
+	_partner_compass = Control.new()
+	_partner_compass.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_partner_compass.position = Vector2(12.0, 110.0)
+	_partner_compass.size = Vector2(140.0, 44.0)
+	_partner_compass.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var arrow := Label.new()
+	arrow.name = "Arrow"
+	var ls1 := LabelSettings.new()
+	ls1.font_size    = 26
+	ls1.font_color   = Color(0.55, 0.95, 1.0)
+	ls1.outline_size  = 2
+	ls1.outline_color = Color(0.0, 0.0, 0.0, 0.8)
+	arrow.label_settings = ls1
+	_partner_compass.add_child(arrow)
+	var dist_lbl := Label.new()
+	dist_lbl.name = "Dist"
+	dist_lbl.position = Vector2(38.0, 10.0)
+	var ls2 := LabelSettings.new()
+	ls2.font_size    = 14
+	ls2.font_color   = Color(0.55, 0.95, 1.0)
+	ls2.outline_size  = 2
+	ls2.outline_color = Color(0.0, 0.0, 0.0, 0.8)
+	dist_lbl.label_settings = ls2
+	_partner_compass.add_child(dist_lbl)
+	$UILayer.add_child(_partner_compass)
+
+func _update_partner_compass() -> void:
+	if not _partner_compass or not is_instance_valid(_partner_compass):
+		return
+	var to_p: Vector2 = _remote_player_node.global_position - (player as Node2D).global_position
+	var dist: float    = to_p.length()
+	var angle_deg: float = rad_to_deg(to_p.angle())
+	var arrows  := ["→", "↘", "↓", "↙", "←", "↖", "↑", "↗"]
+	var sector  := int(fmod(angle_deg + 360.0 + 22.5, 360.0) / 45.0) % 8
+	_partner_compass.get_node("Arrow").text = arrows[sector]
+	_partner_compass.get_node("Dist").text  = "%.0fm" % (dist / 80.0)
+	_partner_compass.modulate.a = 0.3 if dist < 200.0 else 1.0
+
+func _update_revive_proximity(delta: float) -> void:
+	var dist: float = (player as Node2D).global_position.distance_to(_remote_player_node.global_position)
+	if dist <= _REVIVE_RADIUS:
+		_revive_fill = minf(1.0, _revive_fill + delta / _REVIVE_DURATION)
+		_show_revive_bar(_revive_fill)
+		if _revive_fill >= 1.0:
+			_revive_fill = 0.0
+			_partner_is_downed = false
+			if _remote_player_node and is_instance_valid(_remote_player_node):
+				_remote_player_node.set_downed(false)
+			_hide_revive_bar()
+			NetworkManager.send_player_revived()
+	else:
+		_revive_fill = maxf(0.0, _revive_fill - delta * 1.5)
+		if _revive_fill <= 0.0:
+			_hide_revive_bar()
+		else:
+			_show_revive_bar(_revive_fill)

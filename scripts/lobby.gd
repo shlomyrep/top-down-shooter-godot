@@ -1,7 +1,7 @@
 extends Control
 
 ## Increment this every build so both devices can confirm they're on the same version.
-const BUILD_NUMBER := 4
+const BUILD_NUMBER := 5
 
 @onready var partner_avatar_label: Label = $MainVBox/SlotRow/PartnerSlot/SlotMargin/SlotVBox/AvatarLabel
 @onready var partner_name_label: Label   = $MainVBox/SlotRow/PartnerSlot/SlotMargin/SlotVBox/NameLabel

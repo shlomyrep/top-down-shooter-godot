@@ -53,10 +53,10 @@ const WAVE_CONFIGS: Array = [
 	},
 	{
 		"wave": 7,
-		"enemy_count": 40,
-		"title": "WAVE 7",
-		"subtitle": "ARMORED UNIT DETECTED. A tank is leading the assault.\nTarget it before it tears down your walls.",
-		"speed_bonus": 48.0,
+		"enemy_count": 1,
+		"title": "WAVE 7 — BOSS",
+		"subtitle": "THE TANK IS HERE. One armored unit — nearly indestructible.\nDestroy it before it destroys everything.",
+		"speed_bonus": 0.0,
 		"health_bonus": 60,
 	},
 ]

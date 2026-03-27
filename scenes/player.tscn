@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://player001"]
+[gd_scene load_steps=9 format=3 uid="uid://player001"]
 
 [ext_resource type="Script" path="res://scripts/player.gd" id="1_player"]
 
@@ -17,13 +17,40 @@ fill_to = Vector2(1.0, 0.5)
 width = 256
 height = 256
 
+[sub_resource type="Shader" id="Shader_outline"]
+code = "shader_type canvas_item; uniform vec4 outline_color : source_color = vec4(1.0,0.67,0.0,1.0); uniform float outline_width : hint_range(0.5,4.0) = 1.5; void fragment() { vec4 color = texture(TEXTURE,UV); if(color.a>0.01){COLOR=color;return;} vec2 texel=outline_width/vec2(textureSize(TEXTURE,0)); float a=0.0; a=max(a,texture(TEXTURE,UV+vec2(texel.x,0.0)).a); a=max(a,texture(TEXTURE,UV+vec2(-texel.x,0.0)).a); a=max(a,texture(TEXTURE,UV+vec2(0.0,texel.y)).a); a=max(a,texture(TEXTURE,UV+vec2(0.0,-texel.y)).a); a=max(a,texture(TEXTURE,UV+vec2(texel.x,texel.y)).a); a=max(a,texture(TEXTURE,UV+vec2(-texel.x,texel.y)).a); a=max(a,texture(TEXTURE,UV+vec2(texel.x,-texel.y)).a); a=max(a,texture(TEXTURE,UV+vec2(-texel.x,-texel.y)).a); COLOR=vec4(outline_color.rgb,outline_color.a*a); }"
+
+[sub_resource type="ShaderMaterial" id="ShaderMat_player_outline"]
+shader = SubResource("Shader_outline")
+shader_parameter/outline_color = Color(1.0, 0.667, 0.0, 1.0)
+shader_parameter/outline_width = 1.5
+
+[sub_resource type="Gradient" id="Gradient_shadow"]
+offsets = PackedFloat32Array(0.0, 1.0)
+colors = PackedColorArray(0.15, 0.08, 0.0, 0.55, 0.15, 0.08, 0.0, 0.0)
+
+[sub_resource type="GradientTexture2D" id="GradTex_shadow_player"]
+gradient = SubResource("Gradient_shadow")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1.0, 0.5)
+width = 64
+height = 32
+
 [node name="Player" type="CharacterBody2D"]
 collision_layer = 1
 collision_mask = 34
 script = ExtResource("1_player")
 
+[node name="Shadow" type="Sprite2D" parent="."]
+position = Vector2(6, 8)
+texture = SubResource("GradTex_shadow_player")
+scale = Vector2(0.74, 0.38)
+z_index = -1
+
 [node name="BodySprite" type="AnimatedSprite2D" parent="."]
-scale = Vector2(0.2, 0.2)
+scale = Vector2(0.27, 0.27)
+material = SubResource("ShaderMat_player_outline")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape2D_player")
@@ -35,6 +62,20 @@ position = Vector2(34, 0)
 
 [node name="ShootCooldown" type="Timer" parent="."]
 one_shot = true
+
+[node name="AmbientLight" type="PointLight2D" parent="."]
+texture = SubResource("GradientTexture2D_shield")
+texture_scale = 2.2
+color = Color(1.0, 0.67, 0.0, 1.0)
+energy = 0.35
+blend_mode = 0
+
+[node name="MuzzleFlashLight" type="PointLight2D" parent="GunPivot/Muzzle"]
+texture = SubResource("GradientTexture2D_shield")
+texture_scale = 3.5
+color = Color(1.0, 0.94, 0.63, 1.0)
+energy = 0.0
+blend_mode = 0
 
 [node name="ShieldAura" type="PointLight2D" parent="."]
 visible = false

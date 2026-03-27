@@ -10,6 +10,23 @@ func _ready() -> void:
 	wave_number_label.text = str(last_wave) if last_wave > 0 else "—"
 	best_wave_label.text   = str(record)    if record > 0    else "—"
 	new_record_badge.visible = (last_wave > 0 and last_wave == record)
+
+	# Multiplayer: show each player's kill count
+	if GameData.is_multiplayer:
+		var kills_lbl := Label.new()
+		kills_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		kills_lbl.text = "%s: %d kills    %s: %d kills" % [
+			GameData.player_name,  GameData.my_kills,
+			GameData.partner_name, GameData.partner_kills
+		]
+		var ls := LabelSettings.new()
+		ls.font_size    = 18
+		ls.font_color   = Color(0.9, 0.9, 0.9)
+		ls.outline_size  = 2
+		ls.outline_color = Color(0.0, 0.0, 0.0, 0.8)
+		kills_lbl.label_settings = ls
+		$CenterContainer/Panel/Margin/VBox.add_child(kills_lbl)
+
 	# Fade in panel
 	var panel := $CenterContainer/Panel
 	panel.modulate.a = 0.0

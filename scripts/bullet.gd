@@ -8,15 +8,34 @@ var bullet_scale := 1.0
 ## Who fired this bullet (used to trigger aggro on hit enemies)
 var source: Node2D = null
 
+const _TRAIL_MAX := 6
+var _trail_positions: Array[Vector2] = []
+@onready var _trail: Line2D = $Trail
+
 func _ready() -> void:
 	var timer: SceneTreeTimer = get_tree().create_timer(lifetime)
 	timer.timeout.connect(queue_free)
-	# Apply color tint and scale from weapon
 	modulate = hit_color
 	scale = Vector2(bullet_scale, bullet_scale)
+	# Set trail color to match the bullet's weapon color
+	_trail.default_color = Color(hit_color.r, hit_color.g, hit_color.b, 0.65)
 
 func _physics_process(delta: float) -> void:
 	position += transform.x * speed * delta
+	# Update trail: store world positions, then convert to local for Line2D
+	_trail_positions.push_front(global_position)
+	if _trail_positions.size() > _TRAIL_MAX:
+		_trail_positions.resize(_TRAIL_MAX)
+	var pts: PackedVector2Array
+	for i in _trail_positions.size():
+		pts.append(to_local(_trail_positions[i]))
+	_trail.points = pts
+	# Fade the trail width toward the tail
+	var widths := PackedFloat32Array()
+	for i in _trail_positions.size():
+		widths.append(lerp(3.0, 0.3, float(i) / float(_TRAIL_MAX)))
+	_trail.width_curve = null  # clear curve; rely on per-point widths not available in Line2D, use alpha
+	_trail.modulate.a = 0.7
 
 func _on_body_entered(body: Node2D) -> void:
 	if body.has_method("take_damage"):

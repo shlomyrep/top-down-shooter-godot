@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://tank001"]
+[gd_scene load_steps=12 format=3 uid="uid://tank001"]
 
 [ext_resource type="Script" path="res://scripts/tank.gd" id="1_tank"]
 [ext_resource type="Texture2D" path="res://assets/enemies/tankb.png" id="2_tankb"]
@@ -17,19 +17,66 @@ corner_radius_top_right = 2
 corner_radius_bottom_right = 2
 corner_radius_bottom_left = 2
 
+[sub_resource type="Shader" id="Shader_tank_outline"]
+code = "shader_type canvas_item; uniform vec4 outline_color : source_color = vec4(0.224,1.0,0.078,1.0); uniform float outline_width : hint_range(0.5,4.0) = 2.0; void fragment() { vec4 color = texture(TEXTURE,UV); if(color.a>0.01){COLOR=color;return;} vec2 texel=outline_width/vec2(textureSize(TEXTURE,0)); float a=0.0; a=max(a,texture(TEXTURE,UV+vec2(texel.x,0.0)).a); a=max(a,texture(TEXTURE,UV+vec2(-texel.x,0.0)).a); a=max(a,texture(TEXTURE,UV+vec2(0.0,texel.y)).a); a=max(a,texture(TEXTURE,UV+vec2(0.0,-texel.y)).a); a=max(a,texture(TEXTURE,UV+vec2(texel.x,texel.y)).a); a=max(a,texture(TEXTURE,UV+vec2(-texel.x,texel.y)).a); a=max(a,texture(TEXTURE,UV+vec2(texel.x,-texel.y)).a); a=max(a,texture(TEXTURE,UV+vec2(-texel.x,-texel.y)).a); COLOR=vec4(outline_color.rgb,outline_color.a*a); }"
+
+[sub_resource type="ShaderMaterial" id="ShaderMat_tank_outline"]
+shader = SubResource("Shader_tank_outline")
+shader_parameter/outline_color = Color(0.224, 1.0, 0.078, 1.0)
+shader_parameter/outline_width = 2.0
+
+[sub_resource type="Gradient" id="Gradient_tank_shadow"]
+offsets = PackedFloat32Array(0.0, 1.0)
+colors = PackedColorArray(0.0, 0.1, 0.0, 0.6, 0.0, 0.1, 0.0, 0.0)
+
+[sub_resource type="GradientTexture2D" id="GradTex_tank_shadow"]
+gradient = SubResource("Gradient_tank_shadow")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1.0, 0.5)
+width = 128
+height = 64
+
+[sub_resource type="Gradient" id="Gradient_tank_light"]
+offsets = PackedFloat32Array(0.0, 1.0)
+colors = PackedColorArray(1.0, 1.0, 1.0, 0.85, 1.0, 1.0, 1.0, 0.0)
+
+[sub_resource type="GradientTexture2D" id="GradTex_tank_light"]
+gradient = SubResource("Gradient_tank_light")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1.0, 0.5)
+width = 512
+height = 512
+
 [node name="Tank" type="CharacterBody2D"]
 collision_layer = 2
 collision_mask = 37
 script = ExtResource("1_tank")
 
+[node name="Shadow" type="Sprite2D" parent="."]
+position = Vector2(8, 10)
+texture = SubResource("GradTex_tank_shadow")
+scale = Vector2(1.05, 0.45)
+z_index = -1
+
 [node name="BodySprite" type="Sprite2D" parent="."]
 texture = ExtResource("2_tankb")
 scale = Vector2(0.45, 0.45)
+material = SubResource("ShaderMat_tank_outline")
 
 [node name="BarrelSprite" type="Sprite2D" parent="."]
+position = Vector2(-8, 10)
 texture = ExtResource("3_barrel")
 scale = Vector2(0.45, 0.45)
 offset = Vector2(-28, 0)
+
+[node name="AmbientLight" type="PointLight2D" parent="."]
+texture = SubResource("GradTex_tank_light")
+texture_scale = 4.0
+color = Color(0.224, 1.0, 0.078, 1.0)
+energy = 0.75
+blend_mode = 0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape_body")

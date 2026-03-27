@@ -11,12 +11,17 @@ var is_multiplayer: bool = false
 var is_host: bool        = false
 var room_id: String      = ""
 var partner_name: String = ""
+# Per-session kill tallies shown on the game-over screen
+var my_kills: int      = 0
+var partner_kills: int = 0
 
 func reset_multiplayer() -> void:
 	is_multiplayer = false
 	is_host        = false
 	room_id        = ""
 	partner_name   = ""
+	my_kills       = 0
+	partner_kills  = 0
 
 func _ready() -> void:
 	_load()

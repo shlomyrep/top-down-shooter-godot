@@ -10,6 +10,13 @@ collision_layer = 4
 collision_mask = 2
 script = ExtResource("1_bullet")
 
+[node name="Trail" type="Line2D" parent="."]
+width = 3.0
+default_color = Color(1.0, 1.0, 0.6, 0.7)
+begin_cap_mode = 1
+end_cap_mode = 1
+antialias = true
+
 [node name="Glow" type="Polygon2D" parent="."]
 color = Color(1, 0.95, 0.4, 0.3)
 polygon = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)

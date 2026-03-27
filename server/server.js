@@ -183,6 +183,27 @@ io.on('connection', (socket) => {
     socket.to(data.room_id).emit('remote_airstrike_used', data);
   });
 
+  // ── Coin deduplication ───────────────────────────────────────────────────────
+  // Tell partner a coin was collected so they remove their local copy.
+  socket.on('coin_collected', (data) => {
+    socket.to(data.room_id).emit('remote_coin_collected', data);
+  });
+
+  // ── Revive mechanic ──────────────────────────────────────────────────────────
+  socket.on('player_downed', (data) => {
+    socket.to(data.room_id).emit('remote_player_downed', data);
+  });
+
+  socket.on('player_revived', (data) => {
+    socket.to(data.room_id).emit('remote_player_revived', data);
+  });
+
+  // ── Game over sync ───────────────────────────────────────────────────────────
+  // Carries kills count so the game-over screen can show both players' stats.
+  socket.on('game_over_sync', (data) => {
+    socket.to(data.room_id).emit('remote_game_over_sync', data);
+  });
+
   // ── Disconnect ────────────────────────────────────────────────────────────
 
   socket.on('disconnect', () => {

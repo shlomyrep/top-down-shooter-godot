@@ -57,7 +57,7 @@ func _build_visuals() -> void:
 	_body.sprite_frames = frames
 	# Cyan tint so partner is distinguishable from the local (white) player
 	_body.modulate = Color(0.55, 0.95, 1.0, 1.0)
-	_body.scale = Vector2(0.2, 0.2)  # match player.tscn BodySprite scale
+	_body.scale = Vector2(0.27, 0.27)  # match player.tscn BodySprite scale
 	_body.play("idle")
 	add_child(_body)
 
@@ -181,3 +181,13 @@ func teleport_to(pos: Vector2) -> void:
 	global_position = pos
 	_snapshot_buffer.clear()
 	_initialized = false
+
+## Called by main.gd when the partner's downed state changes.
+func set_downed(downed_state: bool) -> void:
+	if downed_state:
+		_body.modulate = Color(1.0, 0.25, 0.25, 0.85)  # Red tint — partner is down
+		_body.play("idle")
+		_name_lbl.text = "⚠ " + GameData.partner_name + " DOWN"
+	else:
+		_body.modulate = Color(0.55, 0.95, 1.0, 1.0)   # Restore cyan
+		_name_lbl.text = GameData.partner_name

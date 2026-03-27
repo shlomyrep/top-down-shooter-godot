@@ -1,11 +1,11 @@
 extends Control
 
-@onready var health_bar := $TopBar/HealthBar
-@onready var health_label := $TopBar/HealthBar/HealthLabel
-@onready var score_label := $TopBar/ScoreLabel
-@onready var wave_label := $TopBar/WaveLabel
-@onready var coin_label := $TopBar/CoinLabel
-@onready var weapon_icon := $TopBar/WeaponIcon
+@onready var health_bar := $TopLeft/VBox/StatsRow/HealthBar
+@onready var health_label := $TopLeft/VBox/StatsRow/HealthBar/HealthLabel
+@onready var score_label := $TopRight/VBox/InfoRow/ScoreLabel
+@onready var wave_label := $TopRight/VBox/WaveLabel
+@onready var coin_label := $TopRight/VBox/InfoRow/CoinLabel
+@onready var weapon_icon := $TopLeft/VBox/StatsRow/WeaponIcon
 @onready var wave_transition_panel := $WaveTransitionPanel
 @onready var wave_complete_title := $WaveTransitionPanel/CenterContainer/VBox/WaveCompleteTitle
 @onready var story_label := $WaveTransitionPanel/CenterContainer/VBox/StoryLabel
@@ -37,8 +37,8 @@ extends Control
 @onready var _shotgun_buy_btn    := $WeaponShopOverlay/Center/ShopPanel/Margin/VBox/ShotgunCard/HBox/ShotgunBuyBtn
 @onready var _rifle_buy_btn      := $WeaponShopOverlay/Center/ShopPanel/Margin/VBox/RifleCard/HBox/RifleBuyBtn
 @onready var _lmg_buy_btn        := $WeaponShopOverlay/Center/ShopPanel/Margin/VBox/LmgCard/HBox/LmgBuyBtn
-@onready var shield_bar          := $TopBar/ShieldBar
-@onready var shield_label        := $TopBar/ShieldBar/ShieldLabel
+@onready var shield_bar          := $TopLeft/VBox/ShieldBar
+@onready var shield_label        := $TopLeft/VBox/ShieldBar/ShieldLabel
 @onready var recovery_shop_overlay := $RecoveryShopOverlay
 @onready var _health_buy_btn     := $RecoveryShopOverlay/Center/ShopPanel/Margin/VBox/HealthCard/HBox/HealthBuyBtn
 @onready var _shield_buy_btn     := $RecoveryShopOverlay/Center/ShopPanel/Margin/VBox/ShieldCard/HBox/ShieldBuyBtn
@@ -113,10 +113,10 @@ func update_health(current: int, maximum: int) -> void:
 	health_label.text = str(current) + " / " + str(maximum)
 
 func update_score(score: int) -> void:
-	score_label.text = "SCORE: " + str(score)
+	score_label.text = "%.4d" % score
 
 func update_coins(amount: int) -> void:
-	coin_label.text = "COINS: " + str(amount)
+	coin_label.text = str(amount) + " c"
 
 func update_weapon(weapon_name: String) -> void:
 	var key := weapon_name.to_lower()
@@ -415,10 +415,10 @@ func _on_shield_squad_btn_pressed() -> void:
 	shield_squad_pressed.emit()
 
 func update_wave(wave: int) -> void:
-	wave_label.text = "WAVE " + str(wave)
-	wave_label.modulate = Color(1, 1, 0, 1)
+	wave_label.text = "WAVE %02d" % wave
+	wave_label.modulate = Color(1.0, 0.851, 0.0, 1.0)
 	var tween: Tween = create_tween()
-	tween.tween_property(wave_label, "modulate", Color.WHITE, 0.8)
+	tween.tween_property(wave_label, "modulate", Color(1.0, 0.851, 0.0, 1.0), 0.8)
 
 func show_wave_transition(config: Dictionary, duration: float = 3.0) -> void:
 	wave_complete_title.text = config["title"] + " COMPLETE"
