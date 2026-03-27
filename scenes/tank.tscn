@@ -66,7 +66,7 @@ scale = Vector2(0.45, 0.45)
 material = SubResource("ShaderMat_tank_outline")
 
 [node name="BarrelSprite" type="Sprite2D" parent="."]
-position = Vector2(-8, 10)
+position = Vector2(0, 12)
 texture = ExtResource("3_barrel")
 scale = Vector2(0.45, 0.45)
 offset = Vector2(-28, 0)

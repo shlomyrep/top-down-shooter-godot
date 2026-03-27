@@ -44,6 +44,71 @@ func set_player_name(new_name: String) -> void:
 	player_name = trimmed if trimmed.length() > 0 else "SURVIVOR"
 	_save()
 
+## Spawn a debris + dust explosion at world-space [pos] when a structure is destroyed.
+## Particles are added directly to the current scene root so they outlive the structure.
+func spawn_structure_explosion(pos: Vector2) -> void:
+	var root: Node = get_tree().current_scene
+
+	# — Debris burst (brown/grey chunks) —
+	var debris := GPUParticles2D.new()
+	debris.emitting  = true
+	debris.one_shot  = true
+	debris.amount    = 22
+	debris.lifetime  = 0.55
+	debris.global_position = pos
+	var dmat := ParticleProcessMaterial.new()
+	dmat.direction             = Vector3(0, 0, 0)
+	dmat.spread                = 180.0
+	dmat.initial_velocity_min  = 90.0
+	dmat.initial_velocity_max  = 200.0
+	dmat.gravity               = Vector3.ZERO
+	dmat.scale_min             = 4.0
+	dmat.scale_max             = 9.0
+	dmat.color                 = Color(0.58, 0.44, 0.24, 1.0)  # sandy brown
+	debris.process_material    = dmat
+	debris.finished.connect(debris.queue_free)
+	root.add_child(debris)
+
+	# — Dust ring (light grey expanding cloud) —
+	var dust := GPUParticles2D.new()
+	dust.emitting  = true
+	dust.one_shot  = true
+	dust.amount    = 12
+	dust.lifetime  = 0.45
+	dust.global_position = pos
+	var dustmat := ParticleProcessMaterial.new()
+	dustmat.direction             = Vector3(0, 0, 0)
+	dustmat.spread                = 180.0
+	dustmat.initial_velocity_min  = 20.0
+	dustmat.initial_velocity_max  = 50.0
+	dustmat.gravity               = Vector3.ZERO
+	dustmat.scale_min             = 10.0
+	dustmat.scale_max             = 20.0
+	dustmat.color                 = Color(0.80, 0.78, 0.72, 0.65)  # dusty grey
+	dust.process_material         = dustmat
+	dust.finished.connect(dust.queue_free)
+	root.add_child(dust)
+
+	# — Flash (brief orange-yellow spark) —
+	var flash := GPUParticles2D.new()
+	flash.emitting  = true
+	flash.one_shot  = true
+	flash.amount    = 8
+	flash.lifetime  = 0.20
+	flash.global_position = pos
+	var fmat := ParticleProcessMaterial.new()
+	fmat.direction             = Vector3(0, 0, 0)
+	fmat.spread                = 180.0
+	fmat.initial_velocity_min  = 30.0
+	fmat.initial_velocity_max  = 70.0
+	fmat.gravity               = Vector3.ZERO
+	fmat.scale_min             = 5.0
+	fmat.scale_max             = 10.0
+	fmat.color                 = Color(1.0, 0.72, 0.10, 0.90)
+	flash.process_material     = fmat
+	flash.finished.connect(flash.queue_free)
+	root.add_child(flash)
+
 func _save() -> void:
 	var data := {"record_wave": record_wave, "player_name": player_name}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)

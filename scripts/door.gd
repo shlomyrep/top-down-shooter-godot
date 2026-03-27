@@ -35,6 +35,7 @@ func toggle() -> void:
 func take_damage(amount: int) -> void:
 	hp -= amount
 	if hp <= 0:
+		GameData.spawn_structure_explosion(global_position)
 		destroyed.emit(cell)
 		remove_from_group("doors")
 		queue_free()
