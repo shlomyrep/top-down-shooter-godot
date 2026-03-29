@@ -263,6 +263,8 @@ func _input(event: InputEvent) -> void:
 			var side := _get_joy_side(event.position)
 			if side != "":
 				_touch_joy[event.index] = {"side": side, "origin": event.position}
+				if side == "aim":
+					player.aim_joy_active = true
 				get_viewport().set_input_as_handled()
 		else:
 			_release_finger(event.index)
@@ -299,6 +301,7 @@ func _release_finger(finger: int) -> void:
 		_move_joy.reset_knob()
 	else:
 		player.aim_input = Vector2.ZERO
+		player.aim_joy_active = false
 		_aim_joy.reset_knob()
 
 func _apply_joy(side: String, pos: Vector2, origin: Vector2) -> void:
@@ -324,6 +327,8 @@ func _process(_delta: float) -> void:
 			if _mouse_joy_side == "":
 				_mouse_joy_side = _get_joy_side(mp)
 				_mouse_joy_origin = mp
+				if _mouse_joy_side == "aim":
+					player.aim_joy_active = true
 			if _mouse_joy_side != "":
 				_apply_joy(_mouse_joy_side, mp, _mouse_joy_origin)
 		elif _mouse_joy_side != "":
@@ -332,6 +337,7 @@ func _process(_delta: float) -> void:
 				_move_joy.reset_knob()
 			else:
 				player.aim_input = Vector2.ZERO
+				player.aim_joy_active = false
 				_aim_joy.reset_knob()
 			_mouse_joy_side = ""
 
@@ -799,6 +805,8 @@ func _try_place_template() -> void:
 			continue
 		var structure := _create_structure(entry.type, entry.cell)
 		add_child(structure)
+		if entry.has("base_rotation") and structure.has_method("set_base_rotation"):
+			structure.set_base_rotation(entry["base_rotation"])
 		if entry.type == "door" and _global_doors_open:
 			structure.toggle()
 		BuildManager.register(entry.cell, structure)

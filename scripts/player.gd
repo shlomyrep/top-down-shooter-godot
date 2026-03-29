@@ -20,8 +20,9 @@ var _is_shooting := false
 
 var bullet_scene: PackedScene = preload("res://scenes/bullet.tscn")
 var aim_direction := Vector2.RIGHT
-var move_input    := Vector2.ZERO
-var aim_input     := Vector2.ZERO
+var move_input      := Vector2.ZERO
+var aim_input       := Vector2.ZERO
+var aim_joy_active  := false
 
 # Multiplayer: broadcast state at 20 Hz — tighter intervals reduce max positional
 # jump per packet and give the entity-interpolation buffer more waypoints.
@@ -139,6 +140,11 @@ func _physics_process(delta: float) -> void:
 	if aim_input.length() > 0.1:
 		aim_direction = aim_input.normalized()
 		gun_pivot.rotation = aim_direction.angle()
+		if shoot_cooldown.is_stopped():
+			shoot()
+			shoot_cooldown.start()
+	elif aim_joy_active:
+		# Joystick pressed but not dragged — shoot in current facing direction.
 		if shoot_cooldown.is_stopped():
 			shoot()
 			shoot_cooldown.start()
