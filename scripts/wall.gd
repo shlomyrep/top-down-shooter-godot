@@ -1,23 +1,30 @@
 extends StaticBody2D
 
-## Buildable wall.  HP 39 with colour-coded damage states (green → yellow → red).
-
 const MAX_HP := 55
 var hp := MAX_HP
 var cell: Vector2i
 
 signal destroyed(cell: Vector2i)
 
-const HP_COLORS: Array = [
-	Color(0.82, 0.18, 0.10),  # hp  1-18 — red
-	Color(0.88, 0.68, 0.08),  # hp 19-36 — yellow
-	Color(0.28, 0.76, 0.28),  # hp 37-55 — green
-]
+const TEX_FULL := preload("res://assets/structures/sandbag_wall.png")
+const TEX_D1   := preload("res://assets/structures/sandbag_wall_d1.png")
+const TEX_D2   := preload("res://assets/structures/sandbag_wall_d2.png")
+const TEX_D3   := preload("res://assets/structures/sandbag_wall_d3.png")
 
-@onready var wall_body := $WallBody  # Sprite2D — tinted via modulate
+@onready var wall_body := $WallBody
 
 func _ready() -> void:
-	wall_body.modulate = Color.WHITE
+	wall_body.texture = TEX_FULL
+
+func _update_texture() -> void:
+	if hp > 41:
+		wall_body.texture = TEX_FULL
+	elif hp > 27:
+		wall_body.texture = TEX_D1
+	elif hp > 13:
+		wall_body.texture = TEX_D2
+	else:
+		wall_body.texture = TEX_D3
 
 func take_damage(amount: int) -> void:
 	hp -= amount
@@ -26,9 +33,8 @@ func take_damage(amount: int) -> void:
 		destroyed.emit(cell)
 		queue_free()
 		return
-	var color_idx := clampi((hp - 1) / 18, 0, 2)
-	wall_body.modulate = HP_COLORS[color_idx]
+	_update_texture()
 
 func repair() -> void:
 	hp = MAX_HP
-	wall_body.modulate = Color.WHITE
+	wall_body.texture = TEX_FULL

@@ -152,12 +152,16 @@ func _explode() -> void:
 		return
 	_exploded = true
 	_is_dead = true
+	var tree := get_tree()
+	if tree == null:
+		queue_free()
+		return
 	# Damage all players in explosion radius
-	for t in get_tree().get_nodes_in_group("target_players"):
+	for t in tree.get_nodes_in_group("target_players"):
 		if is_instance_valid(t) and global_position.distance_to(t.global_position) <= explode_radius:
 			t.take_damage(explode_damage)
 	# Instantly remove all squad members in radius
-	for member in get_tree().get_nodes_in_group("squad_members"):
+	for member in tree.get_nodes_in_group("squad_members"):
 		if is_instance_valid(member) and global_position.distance_to(member.global_position) <= explode_radius:
 			member.queue_free()
 	_spawn_explosion_effect()

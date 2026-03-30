@@ -17,7 +17,7 @@ script = ExtResource("1_tower")
 
 [node name="TowerBase" type="Sprite2D" parent="."]
 texture = ExtResource("2_tower_base")
-scale = Vector2(0.8, 0.86)
+scale = Vector2(0.5, 0.5)
 
 [node name="TowerTop" type="Polygon2D" parent="."]
 polygon = PackedVector2Array(-1, -1, 1, -1, 1, 1, -1, 1)
@@ -27,9 +27,9 @@ color = Color(0, 0, 0, 0)
 
 [node name="Barrel" type="Sprite2D" parent="BarrelPivot"]
 texture = ExtResource("3_tower_barrel")
-position = Vector2(25, 0)
-rotation_degrees = -90.0
-scale = Vector2(1.0, 1.0)
+position = Vector2(0, 0)
+rotation_degrees = 180.0
+scale = Vector2(0.5, 0.5)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("RectShape_tower")

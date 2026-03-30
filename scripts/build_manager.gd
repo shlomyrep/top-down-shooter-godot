@@ -134,7 +134,14 @@ func get_template_cells(center: Vector2i, size: int) -> Array:
 				cell_type = "door"
 			else:
 				cell_type = "wall"
-			result.append({"cell": cell, "type": cell_type})
+			var entry := {"cell": cell, "type": cell_type}
+			if is_door:
+				# Top/bottom edge doors open horizontally; left/right edge doors open vertically
+				if dx == 0 or dx == size - 1:
+					entry["door_orientation"] = "vertical"
+				else:
+					entry["door_orientation"] = "horizontal"
+			result.append(entry)
 	return result
 
 ## Sum the cost of all unoccupied cells in a template cell list.

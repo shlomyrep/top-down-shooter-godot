@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://door001"]
 
 [ext_resource type="Script" path="res://scripts/door.gd" id="1_door"]
+[ext_resource type="Texture2D" path="res://assets/structures/door_closed.png" id="2_door_tex"]
 
 [sub_resource type="RectangleShape2D" id="RectShape_door"]
 size = Vector2(76, 76)
@@ -10,9 +11,9 @@ collision_layer = 32
 collision_mask = 0
 script = ExtResource("1_door")
 
-[node name="DoorBody" type="Polygon2D" parent="."]
-polygon = PackedVector2Array(-38, -38, 38, -38, 38, 38, -38, 38)
-color = Color(0.20, 0.45, 0.88, 1.0)
+[node name="DoorSprite" type="Sprite2D" parent="."]
+texture = ExtResource("2_door_tex")
+scale = Vector2(0.5, 0.5)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("RectShape_door")

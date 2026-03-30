@@ -807,6 +807,8 @@ func _try_place_template() -> void:
 		add_child(structure)
 		if entry.has("base_rotation") and structure.has_method("set_base_rotation"):
 			structure.set_base_rotation(entry["base_rotation"])
+		if entry.has("door_orientation") and structure.has_method("set_orientation"):
+			structure.set_orientation(entry["door_orientation"] == "vertical")
 		if entry.type == "door" and _global_doors_open:
 			structure.toggle()
 		BuildManager.register(entry.cell, structure)
