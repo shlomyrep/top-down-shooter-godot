@@ -166,6 +166,7 @@ func _explode() -> void:
 		if is_instance_valid(member) and global_position.distance_to(member.global_position) <= explode_radius:
 			member.queue_free()
 	_spawn_explosion_effect()
+	SoundManager.play_sfx_2d("bug_death", global_position)
 	died_at.emit(global_position)
 	queue_free()
 

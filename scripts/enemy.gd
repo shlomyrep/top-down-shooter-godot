@@ -137,6 +137,7 @@ func _physics_process(delta: float) -> void:
 				_wall_target.take_damage(damage)
 				attack_cooldown.start()
 				body_sprite.play("attack")
+				SoundManager.play_sfx_2d("enemy_hit_structure", global_position)
 
 func take_damage(amount: int) -> void:
 	if _is_dead:
@@ -148,6 +149,7 @@ func take_damage(amount: int) -> void:
 	if health <= 0:
 		_is_dead = true
 		died_at.emit(global_position)
+		SoundManager.play_sfx_2d("skeleton_death", global_position)
 		_spawn_death_effect()
 		queue_free()
 
@@ -224,6 +226,7 @@ func _on_hit_area_body_entered(body: Node2D) -> void:
 		body.take_damage(damage)
 		attack_cooldown.start()
 		body_sprite.play("attack")
+		SoundManager.play_sfx_2d("enemy_melee_swing", global_position)
 		# Knockback only applies when hitting a player
 		if is_player_body:
 			var push_dir: Vector2 = (global_position - body.global_position).normalized()

@@ -5,6 +5,7 @@ const SAVE_PATH := "user://save.json"
 var record_wave: int = 0
 var player_name: String = "SURVIVOR"
 var _last_wave_reached: int = 0
+var tutorial_plays: int = 0
 
 # ── Multiplayer session state (reset each lobby entry) ────────────────────────
 var is_multiplayer: bool = false
@@ -109,8 +110,12 @@ func spawn_structure_explosion(pos: Vector2) -> void:
 	flash.finished.connect(flash.queue_free)
 	root.add_child(flash)
 
+## Save immediately without requiring a new record. Used by the tutorial system.
+func force_save() -> void:
+	_save()
+
 func _save() -> void:
-	var data := {"record_wave": record_wave, "player_name": player_name}
+	var data := {"record_wave": record_wave, "player_name": player_name, "tutorial_plays": tutorial_plays}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file:
 		file.store_string(JSON.stringify(data))
@@ -127,3 +132,4 @@ func _load() -> void:
 	if parsed is Dictionary:
 		record_wave = int(parsed.get("record_wave", 0))
 		player_name = str(parsed.get("player_name", "SURVIVOR"))
+		tutorial_plays = int(parsed.get("tutorial_plays", 0))

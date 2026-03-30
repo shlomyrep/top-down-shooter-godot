@@ -17,6 +17,8 @@ var shield: int = 0
 var _screen_flash_rect: ColorRect = null
 
 var _is_shooting := false
+var _step_timer: float = 0.0
+var _low_health_warned := false
 
 var bullet_scene: PackedScene = preload("res://scenes/bullet.tscn")
 var aim_direction := Vector2.RIGHT
@@ -153,6 +155,9 @@ func _physics_process(delta: float) -> void:
 		# No aim input — face the movement direction naturally
 		aim_direction = move_input.normalized()
 		gun_pivot.rotation = aim_direction.angle()
+		SoundManager.stop_lmg()
+	else:
+		SoundManager.stop_lmg()
 
 	body_sprite.rotation = gun_pivot.rotation
 
@@ -163,6 +168,16 @@ func _physics_process(delta: float) -> void:
 			body_sprite.play("idle")
 
 	_update_feet(move_input.normalized(), velocity.length())
+	# Footstep sounds
+	if velocity.length() > 10.0:
+		var step_interval := 0.25 if velocity.length() > speed * 0.6 else 0.42
+		_step_timer -= delta
+		if _step_timer <= 0.0:
+			_step_timer = step_interval
+			var snd := "footstep_run" if velocity.length() > speed * 0.6 else "footstep_walk"
+			SoundManager.play_sfx(snd)
+	else:
+		_step_timer = 0.0
 
 
 func _update_feet(move_dir: Vector2, spd: float) -> void:
@@ -200,6 +215,14 @@ func shoot() -> void:
 			})
 	_is_shooting = true
 	body_sprite.play("shoot")
+	# Weapon sounds
+	var _wid := WeaponManager.current_weapon
+	if _wid == "lmg":
+		SoundManager.start_lmg(muzzle.global_position)
+	else:
+		SoundManager.play_weapon(_wid + "_shoot", muzzle.global_position)
+		if _wid == "shotgun":
+			SoundManager.play_weapon("shotgun_pump", muzzle.global_position)
 	# Muzzle flash: burst the point-light energy then tween to zero
 	_muzzle_flash_light.energy = 0.8
 	var _mf_tween := create_tween()
@@ -220,12 +243,20 @@ func take_damage(amount: int) -> void:
 		amount -= absorbed
 		shield_changed.emit(shield, max_shield)
 		_update_aura_visibility()
+		SoundManager.play_sfx("shield_absorb")
+		if shield == 0:
+			SoundManager.play_sfx("shield_depleted")
 	if amount > 0:
 		health -= amount
 		health_changed.emit(health, max_health)
 		_flash()
+		SoundManager.play_sfx("player_hurt")
+		if health <= 20 and not _low_health_warned:
+			_low_health_warned = true
+			SoundManager.play_voice("lh_%d" % (randi() % 2 + 1), SoundManager.VoicePriority.HIGH)
 		if health <= 0:
 			health = 0
+			SoundManager.play_sfx("player_death_sp")
 			if GameData.is_multiplayer:
 				downed.emit()  ## Let main.gd decide between downed vs. game-over
 			else:
@@ -237,15 +268,22 @@ func revive(hp_pct: float = 0.5) -> void:
 	health = maxi(1, int(max_health * hp_pct))
 	health_changed.emit(health, max_health)
 	body_sprite.play("idle")
+	_low_health_warned = false
+	SoundManager.play_sfx("player_revived")
+	SoundManager.play_voice("pr_%d" % (randi() % 2 + 1), SoundManager.VoicePriority.HIGH)
 
 func heal(amount: int) -> void:
 	health = mini(health + amount, max_health)
 	health_changed.emit(health, max_health)
+	if health > 20:
+		_low_health_warned = false
+	SoundManager.play_sfx("player_heal")
 
 func add_shield(amount: int) -> void:
 	shield = mini(shield + amount, max_shield)
 	shield_changed.emit(shield, max_shield)
 	_update_aura_visibility()
+	SoundManager.play_sfx("shield_granted")
 
 func _update_aura_visibility() -> void:
 	shield_aura.visible = shield > 0

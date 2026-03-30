@@ -38,6 +38,8 @@ func _on_hit_area_body_entered(body: Node) -> void:
 		var dmg := player_damage if (body is CharacterBody2D and (body.collision_layer & 1) != 0) else wall_damage
 		body.take_damage(dmg)
 
+	SoundManager.play_sfx_2d("cannonball_impact", impact)
+
 	# AoE blast — damages all structures within aoe_radius of the impact point
 	if aoe_radius > 0.0:
 		_apply_splash(impact, body)

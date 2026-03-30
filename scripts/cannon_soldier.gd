@@ -231,6 +231,7 @@ func _fire_cannonball(target_pos: Vector2) -> void:
 	# Spawn BEHIND the soldier so the ball always starts outside any wall's collision shape
 	cb.global_position = global_position - cb.direction * 25.0
 	get_tree().current_scene.add_child(cb)
+	SoundManager.play_sfx_2d("cannonball_fire", global_position)
 
 func take_damage(amount: int) -> void:
 	if _is_dead:
@@ -246,6 +247,7 @@ func take_damage(amount: int) -> void:
 		_is_dead = true
 		print("[CANNON] DEAD at ", global_position)
 		died_at.emit(global_position)
+		SoundManager.play_sfx_2d("cannon_soldier_death", global_position)
 		_spawn_death_effect()
 		queue_free()
 

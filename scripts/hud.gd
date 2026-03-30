@@ -240,9 +240,11 @@ func _on_buy_btn_pressed() -> void:
 func show_weapon_shop(player_coins: int, current_weapon: String) -> void:
 	_refresh_shop_buttons(player_coins, current_weapon)
 	weapon_shop_overlay.visible = true
+	SoundManager.play_ui("shop_open")
 
 func hide_weapon_shop() -> void:
 	weapon_shop_overlay.visible = false
+	SoundManager.play_ui("shop_close")
 
 func _refresh_shop_buttons(player_coins: int, current_weapon: String) -> void:
 	var buttons: Dictionary = {
@@ -296,9 +298,11 @@ func update_shield(current: int, maximum: int) -> void:
 func show_recovery_shop(player_coins: int, player_health: int, max_health: int, player_shield: int) -> void:
 	_refresh_recovery_buttons(player_coins, player_health, max_health, player_shield)
 	recovery_shop_overlay.visible = true
+	SoundManager.play_ui("shop_open")
 
 func hide_recovery_shop() -> void:
 	recovery_shop_overlay.visible = false
+	SoundManager.play_ui("shop_close")
 
 func _refresh_recovery_buttons(player_coins: int, player_health: int, max_health: int, player_shield: int) -> void:
 	if player_health >= max_health:
@@ -367,6 +371,7 @@ func flash_build_denied() -> void:
 	build_timer_bar.modulate = Color(1.0, 0.2, 0.2, 1.0)
 	var tween := create_tween()
 	tween.tween_property(build_timer_bar, "modulate", Color.WHITE, 0.4)
+	SoundManager.play_ui("build_denied")
 
 func _highlight_palette(active: Button) -> void:
 	for btn in [wall_btn, door_btn, tower_btn, erase_btn, template_btn]:
@@ -377,21 +382,25 @@ func _on_wall_btn_pressed() -> void:
 	build_item_selected.emit("wall")
 	_highlight_palette(wall_btn)
 	template_picker.visible = false
+	SoundManager.play_ui("ui_select")
 
 func _on_door_btn_pressed() -> void:
 	build_item_selected.emit("door")
 	_highlight_palette(door_btn)
 	template_picker.visible = false
+	SoundManager.play_ui("ui_select")
 
 func _on_tower_btn_pressed() -> void:
 	build_item_selected.emit("tower")
 	_highlight_palette(tower_btn)
 	template_picker.visible = false
+	SoundManager.play_ui("ui_select")
 
 func _on_erase_btn_pressed() -> void:
 	build_item_selected.emit("erase")
 	_highlight_palette(erase_btn)
 	template_picker.visible = false
+	SoundManager.play_ui("ui_select")
 
 func _on_template_btn_pressed() -> void:
 	build_item_selected.emit("template")

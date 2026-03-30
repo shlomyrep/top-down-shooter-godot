@@ -48,6 +48,7 @@ var _template_preview: Node2D
 var _template_preview_cells: Array = []
 var _current_buy_station: Node = null
 var _current_recovery_station: Node = null
+var _tutorial_overlay: Control = null
 var _picker_cell: Vector2i
 var _touch_joy := {}        # finger_index → {"side": "move"|"aim", "origin": Vector2}
 var _mouse_joy_side := ""
@@ -149,6 +150,14 @@ func _ready() -> void:
 	hud.squad_pressed.connect(_on_squad_pressed)
 	hud.shield_squad_pressed.connect(_on_shield_squad_pressed)
 	SupportManager.cooldowns_updated.connect(_on_support_cooldowns_updated)
+
+	# Tutorial overlay — solo only, max 3 plays
+	if not GameData.is_multiplayer and GameData.tutorial_plays < 3:
+		_tutorial_overlay = load("res://scripts/tutorial_overlay.gd").new()
+		$UILayer.add_child(_tutorial_overlay)
+		_tutorial_overlay.setup(hud)
+		_tutorial_overlay.start()
+
 	_begin_wave(wave)
 	if GameData.is_multiplayer:
 		_init_multiplayer()
@@ -201,12 +210,14 @@ func _on_recovery_shop_buy(item_id: String) -> void:
 			coins -= item["cost"]
 			hud.update_coins(coins)
 			player.heal(item["amount"])
+			SoundManager.play_ui("purchase_success")
 		"shield":
 			if player.shield >= player.max_shield:
 				return
 			coins -= item["cost"]
 			hud.update_coins(coins)
 			player.add_shield(item["amount"])
+			SoundManager.play_ui("purchase_success")
 	hud.show_recovery_shop(coins, player.health, player.max_health, player.shield)
 
 func _on_hud_buy_pressed() -> void:
@@ -221,6 +232,7 @@ func _on_weapon_shop_buy(weapon_id: String) -> void:
 	coins -= w["cost"]
 	hud.update_coins(coins)
 	player.equip_weapon(weapon_id)
+	SoundManager.play_ui("purchase_success")
 	hud.show_weapon_shop(coins, WeaponManager.current_weapon)
 
 func _on_buy_requested(weapon_id: String, cost: int) -> void:
@@ -234,8 +246,20 @@ func _begin_wave(wave_number: int) -> void:
 	_confirmed_kills.clear()
 	spawn_timer.start()
 	hud.update_wave(wave_number)
+	# Wave music & voice
+	if wave_number == 7:
+		SoundManager.play_music("boss_wave")
+		SoundManager.play_sfx("boss_wave_sting")
+		SoundManager.play_voice("boss_callout", SoundManager.VoicePriority.CRITICAL)
+	else:
+		SoundManager.play_music("fight_bg")
+		SoundManager.play_sfx("wave_start_alarm")
+		var _pw := ["pw_1", "pw_2", "pw_3", "pw_4", "pw_5"]
+		SoundManager.play_voice(_pw[randi() % _pw.size()], SoundManager.VoicePriority.HIGH)
 	if GameData.is_multiplayer and GameData.is_host:
 		NetworkManager.send_wave_event({"type": "wave_start", "wave": wave_number})
+	if is_instance_valid(_tutorial_overlay):
+		_tutorial_overlay.notify_wave_started(wave_number)
 
 # ─── Touch joystick ──────────────────────────────────────────────────────────
 
@@ -351,6 +375,7 @@ func _process(_delta: float) -> void:
 	if BuildManager.build_mode:
 		if not _build_timer.is_stopped():
 			hud.update_build_timer(_build_timer.time_left)
+			SoundManager.notify_build_timer(_build_timer.time_left)
 		hud.notify_build_movement(player != null and player.move_input.length() > 0.1)
 		if BuildManager.selected == "template":
 			_update_template_preview()
@@ -484,6 +509,7 @@ func _try_place_at(cell: Vector2i) -> void:
 	var structure := _create_structure(BuildManager.selected, cell)
 	add_child(structure)
 	BuildManager.register(cell, structure)
+	SoundManager.play_sfx(BuildManager.selected + "_place")
 	if GameData.is_multiplayer:
 		NetworkManager.send_structure_placed(BuildManager.selected, cell.x, cell.y)
 
@@ -496,6 +522,7 @@ func _try_erase_at(cell: Vector2i) -> void:
 	coins += BuildManager.ERASE_REFUND
 	hud.update_coins(coins)
 	BuildManager.unregister(cell)
+	SoundManager.play_sfx("structure_erase")
 	if GameData.is_multiplayer:
 		NetworkManager.send_structure_erased(cell.x, cell.y)
 
@@ -674,6 +701,7 @@ func _on_coin_collected(amount: int, net_id: String = "") -> void:
 	coins += amount
 	hud.update_coins(coins)
 	_coin_registry.erase(net_id)
+	SoundManager.play_sfx("coin_pickup")
 	if GameData.is_multiplayer and net_id != "":
 		NetworkManager.send_coin_collected(net_id)
 
@@ -698,14 +726,25 @@ func _start_between_wave() -> void:
 	var config := WaveManager.get_wave_config(wave)
 	hud.show_wave_transition(config, STORY_DURATION)
 	_between_wave_timer.start(STORY_DURATION)
+	# Wave-complete sounds
+	SoundManager.play_sfx("wave_transition_sting")
+	var _wc := ["wc_1", "wc_2", "wc_3", "wc_4", "wc_5"]
+	SoundManager.play_voice(_wc[randi() % _wc.size()], SoundManager.VoicePriority.HIGH)
+	# Wave-specific story voice (about the upcoming wave)
+	var _next_w := wave + 1
+	if _next_w >= 2 and _next_w <= 7:
+		SoundManager.play_voice("wave_%d" % _next_w, SoundManager.VoicePriority.HIGH)
 	if GameData.is_multiplayer and GameData.is_host:
 		NetworkManager.send_wave_event({"type": "between_wave", "wave": wave})
 
 func _on_between_wave_timeout() -> void:
 	hud.hide_wave_transition()
 	var scaled_build := BUILD_DURATION + float(wave) * 5.0
+	SoundManager.on_build_start()  # swap to build_bg music + ambient, reset timer warning
 	hud.show_build_mode(scaled_build)
 	BuildManager.start_build_mode()
+	if is_instance_valid(_tutorial_overlay):
+		_tutorial_overlay.notify_build_phase_entered(wave)
 	_build_cursor.visible = true
 	_build_timer.start(scaled_build)
 	_refresh_repair_button()
@@ -763,6 +802,7 @@ func _on_door_toggle_pressed() -> void:
 	_global_doors_open = !_global_doors_open
 	for door in get_tree().get_nodes_in_group("doors"):
 		door.toggle()
+	SoundManager.play_sfx("door_toggle_open" if _global_doors_open else "door_toggle_close")
 	if GameData.is_multiplayer:
 		NetworkManager.send_door_toggled(_global_doors_open)
 
@@ -783,6 +823,7 @@ func _on_repair_all_pressed() -> void:
 	for wall in BuildManager.get_damaged_walls():
 		if is_instance_valid(wall):
 			wall.repair()
+	SoundManager.play_sfx("repair_all")
 	_refresh_repair_button()
 
 func _try_place_template() -> void:
@@ -796,6 +837,7 @@ func _try_place_template() -> void:
 		return
 	coins -= cost
 	hud.update_coins(coins)
+	SoundManager.play_sfx("template_place")
 	var player_cell := BuildManager.world_to_cell(player.global_position)
 	for entry in cells:
 		if BuildManager.is_occupied(entry.cell):
@@ -833,6 +875,9 @@ func _on_player_died() -> void:
 	spawn_timer.stop()
 	_between_wave_timer.stop()
 	_build_timer.stop()
+	SoundManager.stop_lmg()
+	SoundManager.play_music("")
+	SoundManager.play_sfx("game_over_sting")
 	GameData.my_kills = _total_kills
 	GameData.save_if_record(wave)
 	if GameData.is_multiplayer:
@@ -843,6 +888,7 @@ func _on_player_died() -> void:
 ## Multiplayer: local player HP reached 0 — enter downed state.
 func _on_player_downed() -> void:
 	player.is_downed = true
+	SoundManager.play_voice("pd_%d" % (randi() % 2 + 1), SoundManager.VoicePriority.CRITICAL)
 	if _partner_is_downed:
 		# Both players are now down → permanent game over
 		_trigger_game_over()
@@ -854,6 +900,9 @@ func _trigger_game_over() -> void:
 	spawn_timer.stop()
 	_between_wave_timer.stop()
 	_build_timer.stop()
+	SoundManager.stop_lmg()
+	SoundManager.play_music("")
+	SoundManager.play_sfx("game_over_sting")
 	GameData.my_kills = _total_kills
 	GameData.save_if_record(wave)
 	if GameData.is_multiplayer:
@@ -872,6 +921,8 @@ func _on_airstrike_pressed() -> void:
 	var strike := airstrike_scene.instantiate()
 	strike.global_position = player.global_position
 	add_child(strike)
+	SoundManager.play_voice("as_%d" % (randi() % 2 + 1), SoundManager.VoicePriority.HIGH)
+	SoundManager.play_sfx("airstrike_incoming")
 	if GameData.is_multiplayer:
 		NetworkManager.send_airstrike_used({"x": player.global_position.x, "y": player.global_position.y})
 
@@ -883,6 +934,7 @@ func _on_squad_pressed() -> void:
 	hud.update_coins(coins)
 	SupportManager.use_squad()
 	_spawn_squad(3, false)
+	SoundManager.play_voice("sd_%d" % (randi() % 2 + 1), SoundManager.VoicePriority.HIGH)
 
 # Spawns 2 shielded soldiers around the player
 func _on_shield_squad_pressed() -> void:
@@ -892,6 +944,7 @@ func _on_shield_squad_pressed() -> void:
 	hud.update_coins(coins)
 	SupportManager.use_shield_squad()
 	_spawn_squad(2, true)
+	SoundManager.play_voice("ss_1", SoundManager.VoicePriority.NORMAL)
 
 func _spawn_squad(count: int, shielded: bool) -> void:
 	for i in count:

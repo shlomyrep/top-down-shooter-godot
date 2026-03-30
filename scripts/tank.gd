@@ -262,6 +262,7 @@ func _fire_cannonball(target_pos: Vector2) -> void:
 	cb.aoe_radius    = 200.0 # ~2.5 tiles blast radius
 	cb.aoe_damage    = 45    # heavy but not instant for splash structures
 	get_tree().current_scene.add_child(cb)
+	SoundManager.play_sfx_2d("tank_shoot", global_position)
 
 func take_damage(amount: int) -> void:
 	if _is_dead: return
@@ -275,6 +276,7 @@ func take_damage(amount: int) -> void:
 	if health <= 0:
 		_is_dead = true
 		died_at.emit(global_position)
+		SoundManager.play_sfx_2d("tank_death", global_position)
 		_spawn_death_effect()
 		queue_free()
 
