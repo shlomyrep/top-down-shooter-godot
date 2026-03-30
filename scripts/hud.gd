@@ -83,6 +83,7 @@ func _ready() -> void:
 	]:
 		var btn: Button = pair[0]
 		btn.icon = pair[1] as Texture2D
+		btn.expand_icon = true
 		btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		btn.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
 	# Show handgun initially
