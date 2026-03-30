@@ -60,7 +60,8 @@ signal shield_squad_pressed
 
 var _doors_open := false
 var _door_toggle_cooldown := 0.0  # prevents rapid-fire door toggling on held tap
-
+var _tex_door_open: Texture2D
+var _tex_door_closed: Texture2D
 # Weapon icon textures, loaded once
 const _WEAPON_ICONS := {
 	"pistol":  "res://assets/player/Top_Down_Survivor/handgun/idle/survivor-idle_handgun_0.png",
@@ -134,8 +135,22 @@ func _ready() -> void:
 	_ready_btn.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
 	_ready_btn.text = ""
 
-	# Place btn (floating BUILD HERE) — keep as construction emoji
-	place_btn.text = "🏗️"
+	# Build mode button (PlaceBtn) — builder icon
+	var build_mode_tex := load("res://assets/ui/btn_build_mode.png") as Texture2D
+	place_btn.icon = build_mode_tex
+	place_btn.expand_icon = true
+	place_btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	place_btn.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
+	place_btn.text = ""
+
+	# Door toggle button — show open icon when doors are closed, closed icon when open
+	_tex_door_open   = load("res://assets/ui/btn_door_tog_open.png")   as Texture2D
+	_tex_door_closed = load("res://assets/ui/btn_door_tog_closed.png") as Texture2D
+	door_toggle_btn.icon = _tex_door_open  # doors start closed → show open icon
+	door_toggle_btn.expand_icon = true
+	door_toggle_btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	door_toggle_btn.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
+	door_toggle_btn.text = ""
 
 	# Show handgun initially
 	update_weapon("pistol")
@@ -434,7 +449,8 @@ func _on_door_toggle_btn_pressed() -> void:
 		return
 	_door_toggle_cooldown = 0.35
 	_doors_open = !_doors_open
-	door_toggle_btn.text = "🚪 🔓" if _doors_open else "🚪 🔒"
+	# Show opposite-state icon: doors open → show closed icon (tap to close), and vice versa
+	door_toggle_btn.icon = _tex_door_closed if _doors_open else _tex_door_open
 	door_toggle_pressed.emit()
 
 # ─── Support callables ────────────────────────────────────────────────────────
