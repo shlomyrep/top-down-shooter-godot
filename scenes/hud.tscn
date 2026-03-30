@@ -368,35 +368,37 @@ layout_mode = 2
 custom_minimum_size = Vector2(96, 100)
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 18
-text = "20🪙"
+text = ""
 
 [node name="DoorBtn" type="Button" parent="BuildPanel/VBox/Palette"]
 layout_mode = 2
 custom_minimum_size = Vector2(96, 100)
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 18
-text = "20🪙"
+text = ""
 
 [node name="TowerBtn" type="Button" parent="BuildPanel/VBox/Palette"]
 layout_mode = 2
 custom_minimum_size = Vector2(96, 100)
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 18
-text = "60🪙"
+text = ""
 
 [node name="EraseBtn" type="Button" parent="BuildPanel/VBox/Palette"]
 layout_mode = 2
 custom_minimum_size = Vector2(96, 100)
 size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 18
-text = "🗑️\n+10🪙"
+theme_override_font_sizes/font_size = 42
+theme_override_colors/font_color = Color(1.0, 0.25, 0.25, 1.0)
+theme_override_colors/font_hover_color = Color(1.0, 0.5, 0.5, 1.0)
+text = "✕"
 
 [node name="TemplateBtn" type="Button" parent="BuildPanel/VBox/Palette"]
 layout_mode = 2
 custom_minimum_size = Vector2(96, 100)
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 28
-text = "⛺"
+text = ""
 modulate = Color(0.4, 0.9, 1.0, 1.0)
 
 [node name="TemplatePicker" type="VBoxContainer" parent="BuildPanel/VBox"]
@@ -413,21 +415,21 @@ layout_mode = 2
 custom_minimum_size = Vector2(0, 72)
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 20
-text = "🏠\n~480🪙"
+text = ""
 
 [node name="MediumBtn" type="Button" parent="BuildPanel/VBox/TemplatePicker/SizeRow"]
 layout_mode = 2
 custom_minimum_size = Vector2(0, 72)
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 20
-text = "🏡\n~640🪙"
+text = ""
 
 [node name="LargeBtn" type="Button" parent="BuildPanel/VBox/TemplatePicker/SizeRow"]
 layout_mode = 2
 custom_minimum_size = Vector2(0, 72)
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 20
-text = "🏰\n~800🪙"
+text = ""
 
 [node name="TemplateCostLabel" type="Label" parent="BuildPanel/VBox/TemplatePicker"]
 layout_mode = 2
@@ -448,7 +450,7 @@ modulate = Color(1.0, 0.7, 0.2, 1.0)
 layout_mode = 2
 custom_minimum_size = Vector2(0, 64)
 theme_override_font_sizes/font_size = 36
-text = "✅"
+text = ""
 
 [node name="DoorToggleBtn" type="Button" parent="."]
 layout_mode = 1
@@ -839,19 +841,19 @@ theme_override_constants/separation = 6
 layout_mode = 2
 custom_minimum_size = Vector2(168, 72)
 theme_override_font_sizes/font_size = 18
-text = "20🪙"
+text = ""
 
 [node name="DoorPickBtn" type="Button" parent="BuildPicker/VBox"]
 layout_mode = 2
 custom_minimum_size = Vector2(168, 72)
 theme_override_font_sizes/font_size = 18
-text = "20🪙"
+text = ""
 
 [node name="TowerPickBtn" type="Button" parent="BuildPicker/VBox"]
 layout_mode = 2
 custom_minimum_size = Vector2(168, 72)
 theme_override_font_sizes/font_size = 18
-text = "60🪙"
+text = ""
 
 [node name="ErasePickBtn" type="Button" parent="BuildPicker/VBox"]
 layout_mode = 2

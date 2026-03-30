@@ -28,6 +28,7 @@ extends Control
 @onready var large_btn           := $BuildPanel/VBox/TemplatePicker/SizeRow/LargeBtn
 @onready var template_cost_label := $BuildPanel/VBox/TemplatePicker/TemplateCostLabel
 @onready var repair_all_btn      := $BuildPanel/VBox/RepairAllBtn
+@onready var _ready_btn          := $BuildPanel/VBox/ReadyBtn
 @onready var support_panel        := $SupportPanel
 @onready var airstrike_btn        := $SupportPanel/VBox/AirstrikeBtn
 @onready var squad_btn            := $SupportPanel/VBox/SquadBtn
@@ -69,10 +70,18 @@ const _WEAPON_ICONS := {
 }
 
 func _ready() -> void:
-	# Assign building images to palette and picker buttons
-	var wall_tex  := load("res://assets/structures/sandbag_wall.png") as Texture2D
-	var door_tex  := load("res://assets/structures/door_closed.png") as Texture2D
-	var tower_tex := load("res://assets/structures/tower_base.png") as Texture2D
+	# Assign UI icons to palette buttons
+	var wall_tex        := load("res://assets/ui/btn_wall.png")        as Texture2D
+	var door_tex        := load("res://assets/ui/btn_door.png")        as Texture2D
+	var tower_tex       := load("res://assets/ui/btn_tower.png")       as Texture2D
+	var camp_tex        := load("res://assets/ui/btn_camp.png")        as Texture2D
+	var repair_tex      := load("res://assets/ui/btn_repair.png")      as Texture2D
+	var ready_tex       := load("res://assets/ui/btn_ready.png")       as Texture2D
+	var camp_sm_tex     := load("res://assets/ui/btn_camp_small.png")  as Texture2D
+	var camp_md_tex     := load("res://assets/ui/btn_camp_medium.png") as Texture2D
+	var camp_lg_tex     := load("res://assets/ui/btn_camp_large.png")  as Texture2D
+
+	# Palette + picker icons (image only, text cleared)
 	for pair: Array in [
 		[wall_btn,  wall_tex],
 		[door_btn,  door_tex],
@@ -86,6 +95,48 @@ func _ready() -> void:
 		btn.expand_icon = true
 		btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		btn.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
+		btn.text = ""
+
+	# Camp template button
+	template_btn.icon = camp_tex
+	template_btn.expand_icon = true
+	template_btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	template_btn.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
+	template_btn.text = ""
+
+	# Erase button — plain bold X, no icon
+	erase_btn.icon = null
+	erase_btn.text = "✕"
+
+	# Size buttons
+	for pair: Array in [
+		[small_btn,  camp_sm_tex],
+		[medium_btn, camp_md_tex],
+		[large_btn,  camp_lg_tex],
+	]:
+		var btn: Button = pair[0]
+		btn.icon = pair[1] as Texture2D
+		btn.expand_icon = true
+		btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		btn.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
+		btn.text = ""
+
+	# Repair button
+	repair_all_btn.icon = repair_tex
+	repair_all_btn.expand_icon = true
+	repair_all_btn.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	repair_all_btn.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
+
+	# Ready button (✅ inside build panel)
+	_ready_btn.icon = ready_tex
+	_ready_btn.expand_icon = true
+	_ready_btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_ready_btn.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
+	_ready_btn.text = ""
+
+	# Place btn (floating BUILD HERE) — keep as construction emoji
+	place_btn.text = "🏗️"
+
 	# Show handgun initially
 	update_weapon("pistol")
 
