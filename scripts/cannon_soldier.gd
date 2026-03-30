@@ -45,11 +45,80 @@ func _ready() -> void:
 
 func _setup_animations() -> void:
 	var frames := SpriteFrames.new()
+	var base := "res://assets/enemies/cannon_soldier/"
+
+	# idle — aim pose (left-facing, no muzzle flash)
 	frames.add_animation("idle")
 	frames.set_animation_loop("idle", false)
-	frames.add_frame("idle", load("res://assets/enemies/sgc1.png"))
+	frames.set_animation_speed("idle", 1.0)
+	frames.add_frame("idle", load(base + "cs_fire_aim.png"))
+
+	# walk_right — 7 frames
+	frames.add_animation("walk_right")
+	frames.set_animation_loop("walk_right", true)
+	frames.set_animation_speed("walk_right", 8.0)
+	for i in range(1, 8):
+		frames.add_frame("walk_right", load(base + "cs_walk_r%d.png" % i))
+
+	# walk_left — 3 frames (cannon facing left)
+	frames.add_animation("walk_left")
+	frames.set_animation_loop("walk_left", true)
+	frames.set_animation_speed("walk_left", 8.0)
+	for i in range(1, 4):
+		frames.add_frame("walk_left", load(base + "cs_walk_l%d.png" % i))
+
+	# walk_up — 5 frames (walk_down = these frames with flip_v in script)
+	frames.add_animation("walk_up")
+	frames.set_animation_loop("walk_up", true)
+	frames.set_animation_speed("walk_up", 8.0)
+	for i in range(1, 6):
+		frames.add_frame("walk_up", load(base + "cs_walk_u%d.png" % i))
+
+	# fire — aim + 3 muzzle-flash frames (left-facing; script flips for right)
+	frames.add_animation("fire")
+	frames.set_animation_loop("fire", true)
+	frames.set_animation_speed("fire", 4.0)
+	frames.add_frame("fire", load(base + "cs_fire_aim.png"))
+	frames.add_frame("fire", load(base + "cs_fire1.png"))
+	frames.add_frame("fire", load(base + "cs_fire2.png"))
+	frames.add_frame("fire", load(base + "cs_fire3.png"))
+
+	# fire_up — top-down cannon view for vertical shots
+	frames.add_animation("fire_up")
+	frames.set_animation_loop("fire_up", true)
+	frames.set_animation_speed("fire_up", 4.0)
+	frames.add_frame("fire_up", load(base + "cs_cannon1.png"))
+	frames.add_frame("fire_up", load(base + "cs_cannon2.png"))
+
 	body_sprite.sprite_frames = frames
-	body_sprite.play("idle")  # single non-looping frame — shows sprite, then stays on frame 0
+	body_sprite.play("idle")
+
+## Pick walk animation + flip based on movement direction.
+func _anim_walk(dir: Vector2) -> void:
+	body_sprite.flip_v = false
+	if abs(dir.x) >= abs(dir.y):
+		body_sprite.flip_h = false
+		body_sprite.play("walk_right" if dir.x > 0.0 else "walk_left")
+	else:
+		body_sprite.flip_h = false
+		if dir.y < 0.0:
+			body_sprite.play("walk_up")
+		else:
+			body_sprite.play("walk_up")
+			body_sprite.flip_v = true
+
+## Pick fire animation + flip based on target direction.
+func _anim_fire(dir: Vector2) -> void:
+	body_sprite.flip_v = false
+	if abs(dir.x) >= abs(dir.y):
+		# Horizontal fire: "fire" anim is left-facing; flip_h for rightward shots
+		body_sprite.flip_h = (dir.x > 0.0)
+		body_sprite.play("fire")
+	else:
+		# Vertical fire: top-down cannon view; flip_v for downward shots
+		body_sprite.flip_h = false
+		body_sprite.flip_v = (dir.y > 0.0)
+		body_sprite.play("fire_up")
 
 func _find_nearest_wall() -> Node2D:
 	var nearest: Node2D = null
@@ -129,8 +198,7 @@ func _physics_process(delta: float) -> void:
 			velocity = dir * speed
 			DepenetrationHelper.resolve(self, delta)
 			move_and_slide()
-			body_sprite.rotation = dir.angle()
-			health_bar_pivot.rotation = -rotation
+			_anim_walk(dir)
 			var d := global_position.distance_to(_wall_target.global_position)
 			if d <= attack_range:
 				print("[CANNON] APPROACH_WALL → ATTACK_WALL  dist=", snappedf(d,1.0))
@@ -141,8 +209,7 @@ func _physics_process(delta: float) -> void:
 			DepenetrationHelper.resolve(self, delta)
 			move_and_slide()
 			var dir := (_wall_target.global_position - global_position).normalized()
-			body_sprite.rotation = dir.angle()
-			health_bar_pivot.rotation = -rotation
+			_anim_fire(dir)
 			if _attack_timer <= 0.0:
 				print("[CANNON] FIRE  target=", _wall_target.global_position)
 				_fire_cannonball(_wall_target.global_position)
@@ -153,6 +220,8 @@ func _physics_process(delta: float) -> void:
 			velocity = Vector2.ZERO
 			DepenetrationHelper.resolve(self, delta)
 			move_and_slide()
+			body_sprite.flip_h = false
+			body_sprite.flip_v = false
 			body_sprite.play("idle")
 			_pick_next_wall()
 

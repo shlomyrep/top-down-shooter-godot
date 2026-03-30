@@ -59,6 +59,7 @@ scale = Vector2(1.6, 0.62)
 z_index = -1
 
 [node name="BodySprite" type="AnimatedSprite2D" parent="."]
+scale = Vector2(0.25, 0.25)
 material = SubResource("ShaderMat_cs_outline")
 
 [node name="AmbientLight" type="PointLight2D" parent="."]
@@ -79,7 +80,7 @@ collision_mask = 33
 shape = SubResource("CircleShape_hit")
 
 [node name="HealthBarPivot" type="Node2D" parent="."]
-position = Vector2(0, -30)
+position = Vector2(0, -50)
 
 [node name="HealthBar" type="ProgressBar" parent="HealthBarPivot"]
 offset_left = -20.0

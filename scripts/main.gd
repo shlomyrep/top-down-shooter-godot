@@ -28,6 +28,7 @@ var airstrike_scene:      PackedScene = preload("res://scenes/airstrike.tscn")
 var squad_scene:          PackedScene = preload("res://scenes/squad_member.tscn")
 var bug_scene:            PackedScene = preload("res://scenes/bug_enemy.tscn")
 var cannon_soldier_scene: PackedScene = preload("res://scenes/cannon_soldier.tscn")
+var cannon_soldier_elite_scene: PackedScene = preload("res://scenes/cannon_soldier_elite.tscn")
 var tank_scene:           PackedScene = preload("res://scenes/tank.tscn")
 
 var score := 0
@@ -523,13 +524,16 @@ func _on_spawn_timer_timeout() -> void:
 	if enemy_count >= max_enemies:
 		return
 
-	var is_tank := wave >= 7 and not _tank_spawned_this_wave
-	var is_cannon := not is_tank and wave >= 5 and randf() < 0.15
-	var is_bug := not is_tank and not is_cannon and wave >= 3 and randf() < 0.40
+	var is_tank   := wave >= 7 and not _tank_spawned_this_wave
+	var is_elite  := not is_tank and wave >= 6 and randf() < 0.10
+	var is_cannon := not is_tank and not is_elite and wave >= 5 and randf() < 0.15
+	var is_bug    := not is_tank and not is_elite and not is_cannon and wave >= 3 and randf() < 0.40
 	var enemy: CharacterBody2D
 	if is_tank:
 		enemy = tank_scene.instantiate() as CharacterBody2D
 		_tank_spawned_this_wave = true
+	elif is_elite:
+		enemy = cannon_soldier_elite_scene.instantiate() as CharacterBody2D
 	elif is_cannon:
 		enemy = cannon_soldier_scene.instantiate() as CharacterBody2D
 	elif is_bug:
@@ -559,6 +563,9 @@ func _on_spawn_timer_timeout() -> void:
 	if is_tank:
 		# Boss-tier health: 30× a cannon soldier so it's a genuine threat to take down
 		enemy.max_health = (120 + int(config["health_bonus"])) * 30
+	elif is_elite:
+		enemy.max_health = 260 + int(config["health_bonus"])
+		enemy.speed = 22.0 + float(config["speed_bonus"]) * 0.5
 	elif is_cannon:
 		enemy.max_health = 120 + int(config["health_bonus"])
 		enemy.speed = 75.0 + float(config["speed_bonus"])
@@ -572,7 +579,7 @@ func _on_spawn_timer_timeout() -> void:
 	add_child(enemy)
 
 	# Assign a network ID so both clients can reference this enemy by ID
-	var type_str := "tank" if is_tank else ("cannon" if is_cannon else ("bug" if is_bug else "skeleton"))
+	var type_str := "tank" if is_tank else ("cannon_elite" if is_elite else ("cannon" if is_cannon else ("bug" if is_bug else "skeleton")))
 	var net_id := str(randi_range(100000, 999999))
 	enemy.set_meta("net_id", net_id)
 
