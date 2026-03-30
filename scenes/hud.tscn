@@ -274,7 +274,7 @@ modulate = Color(0.88, 0.88, 0.88, 1.0)
 
 [node name="CoinLabel" type="Label" parent="TopRight/VBox/InfoRow"]
 layout_mode = 2
-text = "0 c"
+text = "0 🪙"
 theme_override_font_sizes/font_size = 15
 horizontal_alignment = 0
 vertical_alignment = 1
@@ -351,27 +351,27 @@ theme_override_constants/separation = 5
 [node name="WallBtn" type="Button" parent="BuildPanel/VBox/Palette"]
 layout_mode = 2
 custom_minimum_size = Vector2(85, 56)
-text = "20c"
+text = "20🪙"
 
 [node name="DoorBtn" type="Button" parent="BuildPanel/VBox/Palette"]
 layout_mode = 2
 custom_minimum_size = Vector2(85, 56)
-text = "20c"
+text = "20🪙"
 
 [node name="TowerBtn" type="Button" parent="BuildPanel/VBox/Palette"]
 layout_mode = 2
 custom_minimum_size = Vector2(85, 56)
-text = "60c"
+text = "60🪙"
 
 [node name="EraseBtn" type="Button" parent="BuildPanel/VBox/Palette"]
 layout_mode = 2
 custom_minimum_size = Vector2(85, 46)
-text = "ERASE\n+10c"
+text = "🗑️\n+10🪙"
 
 [node name="TemplateBtn" type="Button" parent="BuildPanel/VBox/Palette"]
 layout_mode = 2
 custom_minimum_size = Vector2(85, 46)
-text = "CAMP\nTEMPLATE"
+text = "⛺"
 modulate = Color(0.4, 0.9, 1.0, 1.0)
 
 [node name="TemplatePicker" type="VBoxContainer" parent="BuildPanel/VBox"]
@@ -386,21 +386,21 @@ theme_override_constants/separation = 5
 [node name="SmallBtn" type="Button" parent="BuildPanel/VBox/TemplatePicker/SizeRow"]
 layout_mode = 2
 custom_minimum_size = Vector2(143, 42)
-text = "SMALL\n5x5 ~480c"
+text = "🏠\n~480🪙"
 
 [node name="MediumBtn" type="Button" parent="BuildPanel/VBox/TemplatePicker/SizeRow"]
 layout_mode = 2
 custom_minimum_size = Vector2(143, 42)
-text = "MEDIUM\n7x7 ~640c"
+text = "🏡\n~640🪙"
 
 [node name="LargeBtn" type="Button" parent="BuildPanel/VBox/TemplatePicker/SizeRow"]
 layout_mode = 2
 custom_minimum_size = Vector2(143, 42)
-text = "LARGE\n9x9 ~800c"
+text = "🏰\n~800🪙"
 
 [node name="TemplateCostLabel" type="Label" parent="BuildPanel/VBox/TemplatePicker"]
 layout_mode = 2
-text = "Will cost: ---"
+text = "💰 ---"
 theme_override_font_sizes/font_size = 16
 horizontal_alignment = 1
 modulate = Color(0.9, 0.9, 0.2, 1.0)
@@ -409,13 +409,13 @@ modulate = Color(0.9, 0.9, 0.2, 1.0)
 visible = false
 layout_mode = 2
 custom_minimum_size = Vector2(0, 42)
-text = "REPAIR ALL WALLS — 0c"
+text = "🔧 0🪙"
 modulate = Color(1.0, 0.7, 0.2, 1.0)
 
 [node name="ReadyBtn" type="Button" parent="BuildPanel/VBox"]
 layout_mode = 2
 custom_minimum_size = Vector2(0, 38)
-text = "READY!"
+text = "✅"
 
 [node name="DoorToggleBtn" type="Button" parent="."]
 layout_mode = 1
@@ -429,7 +429,7 @@ offset_right = -8.0
 offset_bottom = -8.0
 grow_horizontal = 0
 grow_vertical = 0
-text = "DOORS: CLOSED"
+text = "🚪 🔒"
 
 [node name="SupportPanel" type="PanelContainer" parent="."]
 layout_mode = 1
@@ -496,7 +496,7 @@ offset_right = -40.0
 offset_bottom = -180.0
 grow_horizontal = 0
 grow_vertical = 0
-text = "BUILD HERE"
+text = "🏗️"
 modulate = Color(0.3, 1.0, 0.5, 1.0)
 
 [node name="WeaponShopOverlay" type="PanelContainer" parent="."]
@@ -803,22 +803,22 @@ theme_override_constants/separation = 6
 [node name="WallPickBtn" type="Button" parent="BuildPicker/VBox"]
 layout_mode = 2
 custom_minimum_size = Vector2(148, 54)
-text = "20c"
+text = "20🪙"
 
 [node name="DoorPickBtn" type="Button" parent="BuildPicker/VBox"]
 layout_mode = 2
 custom_minimum_size = Vector2(148, 54)
-text = "20c"
+text = "20🪙"
 
 [node name="TowerPickBtn" type="Button" parent="BuildPicker/VBox"]
 layout_mode = 2
 custom_minimum_size = Vector2(148, 54)
-text = "60c"
+text = "60🪙"
 
 [node name="ErasePickBtn" type="Button" parent="BuildPicker/VBox"]
 layout_mode = 2
 custom_minimum_size = Vector2(148, 44)
-text = "ERASE  +10c"
+text = "🗑️ +10🪙"
 
 [connection signal="pressed" from="BuildPanel/VBox/Palette/WallBtn"  to="." method="_on_wall_btn_pressed"]
 [connection signal="pressed" from="BuildPanel/VBox/Palette/DoorBtn"  to="." method="_on_door_btn_pressed"]

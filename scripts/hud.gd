@@ -71,7 +71,7 @@ const _WEAPON_ICONS := {
 func _ready() -> void:
 	# Assign building images to palette and picker buttons
 	var wall_tex  := load("res://assets/structures/sandbag_wall.png") as Texture2D
-	var door_tex  := load("res://assets/structures/sandbag_door.png") as Texture2D
+	var door_tex  := load("res://assets/structures/door_closed.png") as Texture2D
 	var tower_tex := load("res://assets/structures/tower_base.png") as Texture2D
 	for pair: Array in [
 		[wall_btn,  wall_tex],
@@ -116,7 +116,7 @@ func update_score(score: int) -> void:
 	score_label.text = "%.4d" % score
 
 func update_coins(amount: int) -> void:
-	coin_label.text = str(amount) + " c"
+	coin_label.text = str(amount) + " 🪙"
 
 func update_weapon(weapon_name: String) -> void:
 	var key := weapon_name.to_lower()
@@ -331,12 +331,12 @@ func _on_large_btn_pressed() -> void:
 	_highlight_size_btn(large_btn)
 
 func update_template_cost(cost: int) -> void:
-	template_cost_label.text = "Will cost: " + str(cost) + "c"
+	template_cost_label.text = "💰 " + str(cost) + " 🪙"
 
 func update_repair_all_button(cost: int, has_damaged: bool, can_afford: bool) -> void:
 	if has_damaged:
 		repair_all_btn.visible = true
-		repair_all_btn.text = "REPAIR ALL WALLS \u2014 " + str(cost) + "c"
+		repair_all_btn.text = "🔧 " + str(cost) + " 🪙"
 		repair_all_btn.disabled = not can_afford
 		repair_all_btn.modulate = Color(1.0, 0.7, 0.2, 1.0) if can_afford else Color(0.5, 0.35, 0.1, 0.7)
 	else:
@@ -382,7 +382,7 @@ func _on_door_toggle_btn_pressed() -> void:
 		return
 	_door_toggle_cooldown = 0.35
 	_doors_open = !_doors_open
-	door_toggle_btn.text = "DOORS: OPEN" if _doors_open else "DOORS: CLOSED"
+	door_toggle_btn.text = "🚪 🔓" if _doors_open else "🚪 🔒"
 	door_toggle_pressed.emit()
 
 # ─── Support callables ────────────────────────────────────────────────────────
@@ -391,9 +391,9 @@ func update_support_cooldowns(
 		cd_air: float, max_air: float,
 		cd_sq: float,  max_sq: float,
 		cd_sh: float,  max_sh: float) -> void:
-	_set_btn_cooldown(airstrike_btn,    cd_air, max_air, "80c")
-	_set_btn_cooldown(squad_btn,        cd_sq,  max_sq,  "50c")
-	_set_btn_cooldown(shield_squad_btn, cd_sh,  max_sh,  "90c")
+	_set_btn_cooldown(airstrike_btn,    cd_air, max_air, "80🪙")
+	_set_btn_cooldown(squad_btn,        cd_sq,  max_sq,  "50🪙")
+	_set_btn_cooldown(shield_squad_btn, cd_sh,  max_sh,  "90🪙")
 
 func _set_btn_cooldown(btn: Button, cd: float, max_cd: float, cost_label: String) -> void:
 	if cd <= 0.0:
@@ -401,7 +401,7 @@ func _set_btn_cooldown(btn: Button, cd: float, max_cd: float, cost_label: String
 		btn.modulate = Color.WHITE
 		btn.disabled = false
 	else:
-		btn.text = str(int(ceil(cd))) + "s"
+		btn.text = "⏳ " + str(int(ceil(cd)))
 		btn.modulate = Color(0.45, 0.45, 0.45, 1.0)
 		btn.disabled = true
 

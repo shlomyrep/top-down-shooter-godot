@@ -186,4 +186,7 @@ func _spawn_explosion_effect() -> void:
 	mat.color = Color(1.0, 0.55, 0.0, 1.0)
 	particles.process_material = mat
 	particles.finished.connect(particles.queue_free)
-	get_tree().current_scene.add_child(particles)
+	var scene_root := get_tree().current_scene if get_tree() else null
+	if scene_root == null:
+		return
+	scene_root.add_child(particles)
