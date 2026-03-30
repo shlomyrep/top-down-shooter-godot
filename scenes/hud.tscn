@@ -466,13 +466,13 @@ text = ""
 
 [node name="DoorToggleBtn" type="Button" parent="."]
 layout_mode = 1
-anchor_left = 0.0
+anchor_left = 1.0
 anchor_top = 1.0
-anchor_right = 0.0
+anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 128.0
+offset_left = -208.0
 offset_top = -270.0
-offset_right = 208.0
+offset_right = -128.0
 offset_bottom = -190.0
 custom_minimum_size = Vector2(80, 80)
 grow_horizontal = 0
@@ -535,13 +535,13 @@ offset_bottom = -42.0
 [node name="PlaceBtn" type="Button" parent="."]
 visible = false
 layout_mode = 1
-anchor_left = 0.0
+anchor_left = 1.0
 anchor_top = 1.0
-anchor_right = 0.0
+anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 40.0
+offset_left = -120.0
 offset_top = -270.0
-offset_right = 120.0
+offset_right = -40.0
 offset_bottom = -190.0
 custom_minimum_size = Vector2(80, 80)
 grow_horizontal = 0
