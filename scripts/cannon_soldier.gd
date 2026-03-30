@@ -111,8 +111,8 @@ func _anim_walk(dir: Vector2) -> void:
 func _anim_fire(dir: Vector2) -> void:
 	body_sprite.flip_v = false
 	if abs(dir.x) >= abs(dir.y):
-		# Horizontal fire: "fire" anim is left-facing; flip_h for rightward shots
-		body_sprite.flip_h = (dir.x > 0.0)
+		# Horizontal fire: "fire" anim is right-facing; flip_h for leftward shots
+		body_sprite.flip_h = (dir.x < 0.0)
 		body_sprite.play("fire")
 	else:
 		# Vertical fire: top-down cannon view; flip_v for downward shots
