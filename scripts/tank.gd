@@ -142,6 +142,7 @@ func _physics_process(delta: float) -> void:
 		# ── Blocked: stand ground, hull lazily faces the threat ───────────────
 		State.HOLD_AND_FIRE:
 			velocity = Vector2.ZERO
+			DepenetrationHelper.resolve(self, delta)
 			move_and_slide()
 			var threat := _get_best_target()
 			if threat and is_instance_valid(threat):
@@ -157,6 +158,7 @@ func _physics_process(delta: float) -> void:
 			var dest       := _next_waypoint()
 			var travel_dir := (dest - global_position).normalized()
 			velocity = travel_dir * move_speed
+			DepenetrationHelper.resolve(self, delta)
 			move_and_slide()
 			# Hull faces travel direction: tanks are tracked, they CANNOT strafe.
 			body_sprite.rotation = lerp_angle(body_sprite.rotation,
@@ -172,6 +174,7 @@ func _physics_process(delta: float) -> void:
 				return
 			var dir := (ram_target.global_position - global_position).normalized()
 			velocity = dir * ram_speed
+			DepenetrationHelper.resolve(self, delta)
 			move_and_slide()
 			# Hull snaps quickly toward charge direction (urgent pivot).
 			body_sprite.rotation = lerp_angle(body_sprite.rotation,
@@ -252,10 +255,12 @@ func _bfs(from: Vector2i, to: Vector2i) -> Array:
 
 func _fire_cannonball(target_pos: Vector2) -> void:
 	var cb: Node2D = _cannonball_scene.instantiate()
-	cb.direction = (target_pos - global_position).normalized()
+	cb.direction     = (target_pos - global_position).normalized()
 	cb.global_position = global_position + cb.direction * 44.0
-	cb.wall_damage   = 999
+	cb.wall_damage   = 999   # direct hit = instant destruction
 	cb.player_damage = 25
+	cb.aoe_radius    = 200.0 # ~2.5 tiles blast radius
+	cb.aoe_damage    = 45    # heavy but not instant for splash structures
 	get_tree().current_scene.add_child(cb)
 
 func take_damage(amount: int) -> void:

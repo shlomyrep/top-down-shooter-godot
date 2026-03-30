@@ -109,6 +109,7 @@ func _physics_process(delta: float) -> void:
 		move_and_slide()
 		return
 	velocity = move_input.normalized() * speed
+	DepenetrationHelper.resolve(self, delta)
 	move_and_slide()
 	# Broadcast position/state to partner
 	if GameData.is_multiplayer:
@@ -200,9 +201,9 @@ func shoot() -> void:
 	_is_shooting = true
 	body_sprite.play("shoot")
 	# Muzzle flash: burst the point-light energy then tween to zero
-	_muzzle_flash_light.energy = 3.0
+	_muzzle_flash_light.energy = 0.8
 	var _mf_tween := create_tween()
-	_mf_tween.tween_property(_muzzle_flash_light, "energy", 0.0, 0.08)
+	_mf_tween.tween_property(_muzzle_flash_light, "energy", 0.0, 0.06)
 
 func equip_weapon(weapon_id: String) -> void:
 	WeaponManager.equip(weapon_id)
@@ -229,7 +230,6 @@ func take_damage(amount: int) -> void:
 				downed.emit()  ## Let main.gd decide between downed vs. game-over
 			else:
 				died.emit()
-				get_tree().reload_current_scene()
 
 ## Called by main.gd when the partner successfully revives this player.
 func revive(hp_pct: float = 0.5) -> void:

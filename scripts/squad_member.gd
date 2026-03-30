@@ -52,7 +52,7 @@ func _ready() -> void:
 	scan_area.body_entered.connect(_on_body_entered)
 	scan_area.body_exited.connect(_on_body_exited)
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	if not player or not is_instance_valid(player):
 		return
 	var follow_pos := player.global_position + _follow_offset
@@ -61,6 +61,7 @@ func _physics_process(_delta: float) -> void:
 		velocity = (follow_pos - global_position).normalized() * speed
 	else:
 		velocity = Vector2.ZERO
+	DepenetrationHelper.resolve(self, delta)
 	move_and_slide()
 
 	if _target and is_instance_valid(_target):

@@ -99,6 +99,7 @@ func _physics_process(delta: float) -> void:
 			var direction: Vector2 = (focus.global_position - global_position).normalized()
 			_knockback_velocity = _knockback_velocity.lerp(Vector2.ZERO, KNOCKBACK_DECAY * delta)
 			velocity = direction * speed + _knockback_velocity
+			DepenetrationHelper.resolve(self, delta)
 			move_and_slide()
 
 			body_sprite.rotation = direction.angle()
@@ -120,6 +121,7 @@ func _physics_process(delta: float) -> void:
 
 		State.ATTACK_STRUCTURE:
 			velocity = Vector2.ZERO
+			DepenetrationHelper.resolve(self, delta)
 			move_and_slide()
 
 			if not _wall_target or not is_instance_valid(_wall_target):

@@ -75,7 +75,7 @@ blend_mode = 0
 
 [node name="MuzzleFlashLight" type="PointLight2D" parent="GunPivot/Muzzle"]
 texture = SubResource("GradientTexture2D_shield")
-texture_scale = 3.5
+texture_scale = 1.8
 color = Color(1.0, 0.94, 0.63, 1.0)
 energy = 0.0
 blend_mode = 0

@@ -127,6 +127,7 @@ func _physics_process(delta: float) -> void:
 		State.APPROACH_WALL:
 			var dir := (_wall_target.global_position - global_position).normalized()
 			velocity = dir * speed
+			DepenetrationHelper.resolve(self, delta)
 			move_and_slide()
 			body_sprite.rotation = dir.angle()
 			health_bar_pivot.rotation = -rotation
@@ -137,6 +138,7 @@ func _physics_process(delta: float) -> void:
 
 		State.ATTACK_WALL:
 			velocity = Vector2.ZERO
+			DepenetrationHelper.resolve(self, delta)
 			move_and_slide()
 			var dir := (_wall_target.global_position - global_position).normalized()
 			body_sprite.rotation = dir.angle()
@@ -149,6 +151,7 @@ func _physics_process(delta: float) -> void:
 		State.IDLE:
 			# No walls — keep checking every frame so we immediately start moving when one appears
 			velocity = Vector2.ZERO
+			DepenetrationHelper.resolve(self, delta)
 			move_and_slide()
 			body_sprite.play("idle")
 			_pick_next_wall()

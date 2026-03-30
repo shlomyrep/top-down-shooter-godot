@@ -80,6 +80,7 @@ func _physics_process(delta: float) -> void:
 		direction = direction.normalized()
 
 	velocity = direction * speed
+	DepenetrationHelper.resolve(self, delta)
 	move_and_slide()
 	body_sprite.rotation = direction.angle()
 	health_bar_pivot.rotation = -rotation
