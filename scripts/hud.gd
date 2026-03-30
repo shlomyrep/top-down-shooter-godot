@@ -62,6 +62,11 @@ var _doors_open := false
 var _door_toggle_cooldown := 0.0  # prevents rapid-fire door toggling on held tap
 var _tex_door_open: Texture2D
 var _tex_door_closed: Texture2D
+# Build panel fade-while-moving
+var _build_player_moving := false
+var _build_panel_alpha   := 1.0
+const _BUILD_FADE_RATE      := 1.0 / 1.5   # 1.5 s full transition
+const _BUILD_PANEL_MIN_ALPHA := 0.12
 # Weapon icon textures, loaded once
 const _WEAPON_ICONS := {
 	"pistol":  "res://assets/player/Top_Down_Survivor/handgun/idle/survivor-idle_handgun_0.png",
@@ -174,6 +179,11 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if _door_toggle_cooldown > 0.0:
 		_door_toggle_cooldown -= delta
+	# Fade build panel when player moves
+	if build_panel.visible:
+		var target_alpha := _BUILD_PANEL_MIN_ALPHA if _build_player_moving else 1.0
+		_build_panel_alpha = move_toward(_build_panel_alpha, target_alpha, _BUILD_FADE_RATE * delta)
+		build_panel.modulate.a = _build_panel_alpha
 
 func update_health(current: int, maximum: int) -> void:
 	health_bar.value = float(current) / float(maximum) * 100.0
@@ -328,7 +338,13 @@ func _on_close_recovery_pressed() -> void:
 
 # ─── Build mode ──────────────────────────────────────────────────────────────
 
+func notify_build_movement(is_moving: bool) -> void:
+	_build_player_moving = is_moving
+
 func show_build_mode(duration: float = 30.0) -> void:
+	_build_player_moving = false
+	_build_panel_alpha   = 1.0
+	build_panel.modulate.a = 1.0
 	build_panel.visible = true
 	place_btn.visible = true
 	_highlight_palette(wall_btn)
@@ -337,6 +353,9 @@ func show_build_mode(duration: float = 30.0) -> void:
 	build_timer_bar.value = duration
 
 func hide_build_mode() -> void:
+	_build_player_moving = false
+	_build_panel_alpha   = 1.0
+	build_panel.modulate.a = 1.0
 	build_panel.visible = false
 	place_btn.visible = false
 	repair_all_btn.visible = false

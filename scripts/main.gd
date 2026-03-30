@@ -351,6 +351,7 @@ func _process(_delta: float) -> void:
 	if BuildManager.build_mode:
 		if not _build_timer.is_stopped():
 			hud.update_build_timer(_build_timer.time_left)
+		hud.notify_build_movement(player != null and player.move_input.length() > 0.1)
 		if BuildManager.selected == "template":
 			_update_template_preview()
 			_build_cursor.visible = false
