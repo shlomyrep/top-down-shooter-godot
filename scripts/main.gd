@@ -41,6 +41,7 @@ var _tank_spawned_this_wave := false
 var _global_doors_open := false  # tracks the current door toggle state
 var _between_wave_timer: Timer
 var _build_timer: Timer
+var _build_timer_paused_remaining: float = 0.0
 var _build_cursor: Polygon2D
 var _build_cursor_cell: Vector2i
 var _current_template_size: String = "small"
@@ -156,6 +157,8 @@ func _ready() -> void:
 		_tutorial_overlay = load("res://scripts/tutorial_overlay.gd").new()
 		$UILayer.add_child(_tutorial_overlay)
 		_tutorial_overlay.setup(hud)
+		_tutorial_overlay.request_pause_build.connect(_on_tutorial_pause_build)
+		_tutorial_overlay.request_resume_build.connect(_on_tutorial_resume_build)
 		_tutorial_overlay.start()
 
 	_begin_wave(wave)
@@ -757,6 +760,16 @@ func _on_build_timer_timeout() -> void:
 		hud.show_partner_waiting_label()
 		return
 	_end_build_phase()
+
+func _on_tutorial_pause_build() -> void:
+	if not _build_timer.is_stopped():
+		_build_timer_paused_remaining = _build_timer.time_left
+		_build_timer.stop()
+
+func _on_tutorial_resume_build() -> void:
+	if _build_timer_paused_remaining > 0.0:
+		_build_timer.start(_build_timer_paused_remaining)
+		_build_timer_paused_remaining = 0.0
 
 func _end_build_phase() -> void:
 	if not BuildManager.build_mode:

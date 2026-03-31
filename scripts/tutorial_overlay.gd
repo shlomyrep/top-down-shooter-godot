@@ -15,9 +15,12 @@ const FINGER_H         := 90.0
 const STEP_CAMP   := 0   # wave-1 build: highlight CAMP / template button
 const STEP_BUILD  := 1   # wave-1 build: highlight floating BUILD / place button
 const STEP_DOORS  := 2   # wave-1 build: highlight door-toggle button
-const STEP_BIGGER := 3   # wave-2 build: highlight MEDIUM template button
 const STEP_SQUAD  := 4   # wave-2 combat: highlight SQUAD button
 const STEP_DONE   := 99  # waiting state between wave-1 and wave-2
+
+## Emitted so main.gd can pause/resume the build-phase countdown timer.
+signal request_pause_build
+signal request_resume_build
 
 var _hud: Control
 var _active: bool = false
@@ -92,7 +95,6 @@ func setup(hud_ref: Control) -> void:
 	_hud.build_place_pressed.connect(_on_build_place_pressed)
 	_hud.build_picker_selected.connect(_on_build_picker_selected)
 	_hud.door_toggle_pressed.connect(_on_door_toggle_pressed)
-	_hud.template_size_selected.connect(_on_template_size_selected)
 	_hud.squad_pressed.connect(_on_squad_pressed)
 	BuildManager.build_mode_ended.connect(_on_build_mode_ended)
 
@@ -110,11 +112,8 @@ func start() -> void:
 func notify_build_phase_entered(wave_num: int) -> void:
 	if not _active:
 		return
-	match wave_num:
-		1:
-			_show_step(STEP_CAMP)
-		2:
-			_show_step(STEP_BIGGER)
+	if wave_num == 1:
+		_show_step(STEP_CAMP)
 
 
 ## Called from main.gd _begin_wave() with the incoming wave number.
@@ -146,10 +145,6 @@ func _show_step(idx: int) -> void:
 				return
 			_target_node = _hud.get_node_or_null("DoorToggleBtn")
 			_msg_label.text = "Tap to Open or\nClose your\ncamp GATES!"
-
-		STEP_BIGGER:
-			_target_node = _hud.get_node_or_null("BuildPanel/VBox/TemplatePicker/SizeRow/MediumBtn")
-			_msg_label.text = "Build a BIGGER CAMP!\nTry MEDIUM or LARGE\nfor stronger defenses"
 
 		STEP_SQUAD:
 			_target_node = _hud.get_node_or_null("SupportPanel/VBox/SquadBtn")
@@ -211,6 +206,10 @@ func _process(_delta: float) -> void:
 func _set_pointer_visible(on: bool) -> void:
 	_finger.visible = on
 	_panel.visible = on
+	if on:
+		request_pause_build.emit()
+	else:
+		request_resume_build.emit()
 
 
 func _hide() -> void:
@@ -251,13 +250,6 @@ func _on_door_toggle_pressed() -> void:
 		_step = STEP_DONE
 
 
-func _on_template_size_selected(size: String) -> void:
-	if _step == STEP_BIGGER and size in ["medium", "large"]:
-		_hide()
-		# Wave-2 build hint done — enter waiting state until squad delay fires
-		_step = STEP_DONE
-
-
 func _on_squad_pressed() -> void:
 	if _step == STEP_SQUAD:
 		_finish()
@@ -268,7 +260,7 @@ func _on_build_mode_ended() -> void:
 		return
 	# Build phase ended without the player completing the build steps
 	# — dismiss current hint and enter waiting state for the next phase
-	if _step in [STEP_CAMP, STEP_BUILD, STEP_DOORS, STEP_BIGGER]:
+	if _step in [STEP_CAMP, STEP_BUILD, STEP_DOORS]:
 		_hide()
 		_step = STEP_DONE
 

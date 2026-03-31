@@ -487,9 +487,9 @@ anchor_top = 0.5
 anchor_right = 0.0
 anchor_bottom = 0.5
 offset_left = 10.0
-offset_top = -110.0
+offset_top = -160.0
 offset_right = 130.0
-offset_bottom = 160.0
+offset_bottom = 110.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_support_bg")
 
 [node name="VBox" type="VBoxContainer" parent="SupportPanel"]

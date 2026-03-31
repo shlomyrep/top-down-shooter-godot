@@ -228,8 +228,8 @@ func _physics_process(delta: float) -> void:
 func _fire_cannonball(target_pos: Vector2) -> void:
 	var cb: Node2D = _cannonball_scene.instantiate()
 	cb.direction = (target_pos - global_position).normalized()
-	# Spawn BEHIND the soldier so the ball always starts outside any wall's collision shape
-	cb.global_position = global_position - cb.direction * 25.0
+	# Spawn at the muzzle tip so the ball appears from the correct end of the barrel
+	cb.global_position = global_position + cb.direction * 25.0
 	get_tree().current_scene.add_child(cb)
 	SoundManager.play_sfx_2d("cannonball_fire", global_position)
 
