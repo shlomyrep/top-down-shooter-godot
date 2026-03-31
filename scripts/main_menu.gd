@@ -18,7 +18,7 @@ func _ready() -> void:
 
 func _refresh_labels() -> void:
 	var rec: int = GameData.record_wave
-	record_wave_label.text = ("WAVE  %d" % rec) if rec > 0 else "—"
+	record_wave_label.text = (tr("WAVE_RECORD") % rec) if rec > 0 else tr("NO_RECORD")
 	player_name_label.text = "@" + GameData.player_name
 
 func _apply_styles() -> void:

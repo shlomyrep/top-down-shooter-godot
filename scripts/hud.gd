@@ -204,7 +204,7 @@ func update_weapon(weapon_name: String) -> void:
 	tween.tween_property(weapon_icon, "modulate", Color.WHITE, 0.6)
 
 func show_buy_prompt(weapon_name: String, cost: int) -> void:
-	buy_prompt_label.text = "Buy " + weapon_name + " — " + str(cost) + " coins  [E]"
+	buy_prompt_label.text = tr("BUY_PROMPT") % [weapon_name, cost]
 	buy_prompt_label.modulate = Color(1, 1, 1, 0)
 	buy_prompt_label.visible = true
 	buy_btn.visible = true
@@ -257,19 +257,19 @@ func _refresh_shop_buttons(player_coins: int, current_weapon: String) -> void:
 		var btn: Button = buttons[wid]
 		var w: Dictionary = WeaponManager.WEAPONS[wid]
 		if current_weapon == wid:
-			btn.text = "EQUIPPED"
+			btn.text = tr("SHOP_EQUIPPED")
 			btn.disabled = true
 			btn.modulate = Color(0.3, 1.0, 0.5, 1.0)
 		elif w["cost"] == 0:
-			btn.text = "EQUIP"
+			btn.text = tr("SHOP_EQUIP")
 			btn.disabled = false
 			btn.modulate = Color.WHITE
 		elif player_coins >= w["cost"]:
-			btn.text = "BUY " + str(w["cost"]) + "c"
+			btn.text = tr("SHOP_BUY_COST") % [w["cost"]]
 			btn.disabled = false
 			btn.modulate = Color.WHITE
 		else:
-			btn.text = str(w["cost"]) + "c"
+			btn.text = tr("SHOP_COST_ONLY") % [w["cost"]]
 			btn.disabled = true
 			btn.modulate = Color(1.0, 0.3, 0.3, 0.7)
 
@@ -306,28 +306,28 @@ func hide_recovery_shop() -> void:
 
 func _refresh_recovery_buttons(player_coins: int, player_health: int, max_health: int, player_shield: int) -> void:
 	if player_health >= max_health:
-		_health_buy_btn.text = "FULL"
+		_health_buy_btn.text = tr("RECOVERY_FULL")
 		_health_buy_btn.disabled = true
 		_health_buy_btn.modulate = Color(0.3, 1.0, 0.5, 1.0)
 	elif player_coins >= 40:
-		_health_buy_btn.text = "BUY 40c"
+		_health_buy_btn.text = tr("RECOVERY_BUY_HEALTH")
 		_health_buy_btn.disabled = false
 		_health_buy_btn.modulate = Color.WHITE
 	else:
-		_health_buy_btn.text = "40c"
+		_health_buy_btn.text = tr("SHOP_COST_ONLY") % [40]
 		_health_buy_btn.disabled = true
 		_health_buy_btn.modulate = Color(1.0, 0.3, 0.3, 0.7)
 
 	if player_shield >= 100:
-		_shield_buy_btn.text = "FULL"
+		_shield_buy_btn.text = tr("RECOVERY_FULL")
 		_shield_buy_btn.disabled = true
 		_shield_buy_btn.modulate = Color(0.3, 0.6, 1.0, 1.0)
 	elif player_coins >= 75:
-		_shield_buy_btn.text = "BUY 75c"
+		_shield_buy_btn.text = tr("RECOVERY_BUY_SHIELD")
 		_shield_buy_btn.disabled = false
 		_shield_buy_btn.modulate = Color.WHITE
 	else:
-		_shield_buy_btn.text = "75c"
+		_shield_buy_btn.text = tr("SHOP_COST_ONLY") % [75]
 		_shield_buy_btn.disabled = true
 		_shield_buy_btn.modulate = Color(1.0, 0.3, 0.3, 0.7)
 
@@ -487,17 +487,17 @@ func update_support_cooldowns(
 		cd_air: float, max_air: float,
 		cd_sq: float,  max_sq: float,
 		cd_sh: float,  max_sh: float) -> void:
-	_set_btn_cooldown(airstrike_btn,    cd_air, max_air, "80🪙")
-	_set_btn_cooldown(squad_btn,        cd_sq,  max_sq,  "50🪙")
-	_set_btn_cooldown(shield_squad_btn, cd_sh,  max_sh,  "90🪙")
+	_set_btn_cooldown(airstrike_btn,    cd_air, max_air, "80🪙", true)
+	_set_btn_cooldown(squad_btn,        cd_sq,  max_sq,  "50🪙", true)
+	_set_btn_cooldown(shield_squad_btn, cd_sh,  max_sh,  "90🪙", true)
 
-func _set_btn_cooldown(btn: Button, cd: float, max_cd: float, cost_label: String) -> void:
+func _set_btn_cooldown(btn: Button, cd: float, max_cd: float, cost_label: String, _use_tr: bool = false) -> void:
 	if cd <= 0.0:
 		btn.text = cost_label
 		btn.modulate = Color.WHITE
 		btn.disabled = false
 	else:
-		btn.text = "⏳ " + str(int(ceil(cd)))
+		btn.text = tr("SUPPORT_COOLDOWN") % [int(ceil(cd))]
 		btn.modulate = Color(0.45, 0.45, 0.45, 1.0)
 		btn.disabled = true
 
@@ -511,14 +511,17 @@ func _on_shield_squad_btn_pressed() -> void:
 	shield_squad_pressed.emit()
 
 func update_wave(wave: int) -> void:
-	wave_label.text = "WAVE %02d" % wave
+	wave_label.text = tr("WAVE_LABEL") % [wave]
 	wave_label.modulate = Color(1.0, 0.851, 0.0, 1.0)
 	var tween: Tween = create_tween()
 	tween.tween_property(wave_label, "modulate", Color(1.0, 0.851, 0.0, 1.0), 0.8)
 
 func show_wave_transition(config: Dictionary, duration: float = 3.0) -> void:
-	wave_complete_title.text = config["title"] + " COMPLETE"
-	story_label.text = config["subtitle"]
+	var title_tr: String = tr(config["title"])
+	if "%d" in title_tr or "%s" in title_tr:
+		title_tr = title_tr % [config["wave"]]
+	wave_complete_title.text = title_tr + " " + tr("WAVE_SUFFIX_COMPLETE")
+	story_label.text = tr(config["subtitle"])
 	countdown_bar.max_value = duration
 	countdown_bar.value = duration
 	wave_transition_panel.modulate = Color(1, 1, 1, 0)
@@ -560,7 +563,7 @@ func _make_center_label(msg: String, col: Color) -> Label:
 
 func show_partner_waiting_label() -> void:
 	if not _partner_waiting_label:
-		_partner_waiting_label = _make_center_label("⏳  Waiting for partner...", Color(1.0, 0.85, 0.2, 1.0))
+		_partner_waiting_label = _make_center_label(tr("BUILD_PARTNER_WAITING"), Color(1.0, 0.85, 0.2, 1.0))
 	_partner_waiting_label.visible = true
 
 func hide_partner_waiting_label() -> void:
@@ -569,7 +572,7 @@ func hide_partner_waiting_label() -> void:
 
 func show_partner_ready_label() -> void:
 	if not _partner_ready_label:
-		_partner_ready_label = _make_center_label("✔  Partner is READY!", Color(0.3, 1.0, 0.45, 1.0))
+		_partner_ready_label = _make_center_label(tr("BUILD_PARTNER_READY"), Color(0.3, 1.0, 0.45, 1.0))
 	_partner_ready_label.visible = true
 
 func hide_partner_ready_label() -> void:

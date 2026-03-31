@@ -7,6 +7,28 @@ var player_name: String = "SURVIVOR"
 var _last_wave_reached: int = 0
 var tutorial_plays: int = 0
 
+## Voice language code. Supported: "en", "he". Defaults to "en".
+var voice_language: String = "en"
+
+## On-device friends list (array of player name strings, saved to disk).
+var saved_friends: Array = []
+
+func add_friend(name: String) -> void:
+	var trimmed := name.strip_edges().to_upper()
+	if trimmed.is_empty() or trimmed in saved_friends:
+		return
+	saved_friends.append(trimmed)
+	_save()
+
+func remove_friend(name: String) -> void:
+	var idx := saved_friends.find(name.strip_edges().to_upper())
+	if idx >= 0:
+		saved_friends.remove_at(idx)
+		_save()
+
+func has_friend(name: String) -> bool:
+	return name.strip_edges().to_upper() in saved_friends
+
 # ── Multiplayer session state (reset each lobby entry) ────────────────────────
 var is_multiplayer: bool = false
 var is_host: bool        = false
@@ -26,6 +48,19 @@ func reset_multiplayer() -> void:
 
 func _ready() -> void:
 	_load()
+	_apply_locale()
+
+func _apply_locale() -> void:
+	# Android reports Hebrew as "iw" (old Java code); normalize to "he".
+	const ALIASES := {"iw": "he", "in": "id", "ji": "yi"}
+	var lang := OS.get_locale_language()
+	if lang in ALIASES:
+		lang = ALIASES[lang]
+	var supported := TranslationServer.get_loaded_locales()
+	if lang in supported:
+		TranslationServer.set_locale(lang)
+	else:
+		TranslationServer.set_locale("en")
 
 ## Call when a game session ends.
 ## Saves the wave if it is a new record. Returns true if it is.
@@ -115,7 +150,7 @@ func force_save() -> void:
 	_save()
 
 func _save() -> void:
-	var data := {"record_wave": record_wave, "player_name": player_name, "tutorial_plays": tutorial_plays}
+	var data := {"record_wave": record_wave, "player_name": player_name, "tutorial_plays": tutorial_plays, "voice_language": voice_language, "saved_friends": saved_friends}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file:
 		file.store_string(JSON.stringify(data))
@@ -133,3 +168,7 @@ func _load() -> void:
 		record_wave = int(parsed.get("record_wave", 0))
 		player_name = str(parsed.get("player_name", "SURVIVOR"))
 		tutorial_plays = int(parsed.get("tutorial_plays", 0))
+		voice_language = str(parsed.get("voice_language", "en"))
+		var raw_friends = parsed.get("saved_friends", [])
+		if raw_friends is Array:
+			saved_friends = raw_friends

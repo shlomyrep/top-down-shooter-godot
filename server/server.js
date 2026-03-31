@@ -9,16 +9,28 @@ const io = new Server(server, {
 });
 
 /**
- * Each entry: { socket, playerName }
- * @type {Array<{socket: import('socket.io').Socket, playerName: string}>}
- */
-const waitingQueue = [];
-
-/**
- * roomId → { players: Set<socketId>, hostId: string, readyCount: number }
- * @type {Map<string, {players: Set<string>, hostId: string, readyCount: number}>}
+ * roomId → { players: Set<socketId>, hostId: string, readyCount: number, code: string }
+ * @type {Map<string, {players: Set<string>, hostId: string, readyCount: number, code: string}>}
  */
 const rooms = new Map();
+
+/**
+ * 5-char code → roomId  (only pending rooms awaiting a second player)
+ * @type {Map<string, string>}
+ */
+const roomsByCode = new Map();
+
+/**
+ * roomId → creator's player name  (set on create_room, deleted on join_room/cancel)
+ * @type {Map<string, string>}
+ */
+const pendingCreators = new Map();
+
+/**
+ * playerName → socket.id  (online presence registry)
+ * @type {Map<string, string>}
+ */
+const onlinePlayers = new Map();
 
 function findRoomBySocket(socketId) {
   for (const [roomId, room] of rooms) {
@@ -27,45 +39,86 @@ function findRoomBySocket(socketId) {
   return null;
 }
 
+function generateRoomCode() {
+  // Exclude chars that look alike: 0/O, 1/I
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code, attempts = 0;
+  do {
+    code = '';
+    for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    attempts++;
+  } while (roomsByCode.has(code) && attempts < 100);
+  return code;
+}
+
 io.on('connection', (socket) => {
   console.log(`[+] ${socket.id} connected  (total: ${io.engine.clientsCount})`);
 
-  // ── Matchmaking ────────────────────────────────────────────────────────────
+  // ── Online presence ────────────────────────────────────────────────────────
 
-  socket.on('find_match', ({ player_name }) => {
-    if (waitingQueue.length > 0) {
-      const opponent = waitingQueue.shift();
-      const roomId   = `room_${Date.now()}_${Math.floor(Math.random() * 9999)}`;
-      const room     = {
-        players:    new Set([socket.id, opponent.socket.id]),
-        hostId:     opponent.socket.id,
-        readyCount: 0,
-      };
-      rooms.set(roomId, room);
-      socket.join(roomId);
-      opponent.socket.join(roomId);
+  socket.on('register_online', ({ player_name }) => {
+    if (player_name) onlinePlayers.set(player_name, socket.id);
+  });
 
-      socket.emit('match_found', {
-        room_id:      roomId,
-        partner_name: opponent.playerName,
-        is_host:      false,
-      });
-      opponent.socket.emit('match_found', {
-        room_id:      roomId,
-        partner_name: player_name,
-        is_host:      true,
-      });
-      console.log(`[room] ${roomId}: host=${opponent.socket.id}  join=${socket.id}`);
-    } else {
-      waitingQueue.push({ socket, playerName: player_name });
-      socket.emit('searching', {});
-      console.log(`[queue] ${socket.id} (${player_name}) waiting – queue: ${waitingQueue.length}`);
+  socket.on('check_friends_online', ({ friends }) => {
+    if (!Array.isArray(friends)) return;
+    const online_names = friends.filter(name => onlinePlayers.has(name));
+    socket.emit('friends_online_status', { online_names });
+  });
+
+  socket.on('ping_friend', ({ target_name, from_name, room_code }) => {
+    const targetId = onlinePlayers.get(target_name);
+    if (targetId) {
+      io.to(targetId).emit('friend_invite', { from_name, room_code });
+      console.log(`[invite] ${from_name} → ${target_name} (code=${room_code})`);
     }
   });
 
-  socket.on('cancel_search', () => {
-    const idx = waitingQueue.findIndex(e => e.socket.id === socket.id);
-    if (idx !== -1) waitingQueue.splice(idx, 1);
+  // ── Matchmaking (room codes) ───────────────────────────────────────────────
+
+  socket.on('create_room', ({ player_name }) => {
+    const code   = generateRoomCode();
+    const roomId = `room_${Date.now()}_${Math.floor(Math.random() * 9999)}`;
+    const room   = { players: new Set([socket.id]), hostId: socket.id, readyCount: 0, code };
+    rooms.set(roomId, room);
+    roomsByCode.set(code, roomId);
+    pendingCreators.set(roomId, player_name);
+    socket.join(roomId);
+    socket.emit('room_created', { code, room_id: roomId });
+    console.log(`[room] ${roomId}: created by ${player_name} code=${code}`);
+  });
+
+  socket.on('join_room', ({ code, player_name }) => {
+    const upperCode = (code || '').trim().toUpperCase();
+    const roomId    = roomsByCode.get(upperCode);
+    if (!roomId) {
+      socket.emit('join_error', { message: 'Room not found' });
+      return;
+    }
+    const room = rooms.get(roomId);
+    if (!room || room.players.size >= 2) {
+      socket.emit('join_error', { message: 'Room is full' });
+      return;
+    }
+    const hostName = pendingCreators.get(roomId) || 'UNKNOWN';
+    room.players.add(socket.id);
+    roomsByCode.delete(upperCode);
+    pendingCreators.delete(roomId);
+    socket.join(roomId);
+    socket.emit('match_found', { room_id: roomId, partner_name: hostName,  is_host: false });
+    io.to(room.hostId).emit('match_found', { room_id: roomId, partner_name: player_name, is_host: true });
+    console.log(`[room] ${roomId}: ${player_name} joined host, code=${upperCode}`);
+  });
+
+  socket.on('cancel_room', () => {
+    const result = findRoomBySocket(socket.id);
+    if (result) {
+      const { roomId, room } = result;
+      if (room.code) roomsByCode.delete(room.code);
+      pendingCreators.delete(roomId);
+      rooms.delete(roomId);
+      console.log(`[room] ${roomId}: cancelled by creator`);
+    }
   });
 
   socket.on('player_ready', ({ room_id }) => {
@@ -208,15 +261,19 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log(`[-] ${socket.id} disconnected`);
-    // Remove from waiting queue
-    const qIdx = waitingQueue.findIndex(e => e.socket.id === socket.id);
-    if (qIdx !== -1) waitingQueue.splice(qIdx, 1);
-    // Notify room partner
+    // Remove from presence registry
+    for (const [name, id] of onlinePlayers) {
+      if (id === socket.id) { onlinePlayers.delete(name); break; }
+    }
+    // Clean up pending room if creator disconnected before anyone joined
     const result = findRoomBySocket(socket.id);
     if (result) {
-      socket.to(result.roomId).emit('partner_disconnected', {});
-      rooms.delete(result.roomId);
-      console.log(`[room] ${result.roomId}: closed (partner disconnected)`);
+      const { roomId, room } = result;
+      if (room.code) roomsByCode.delete(room.code);
+      pendingCreators.delete(roomId);
+      socket.to(roomId).emit('partner_disconnected', {});
+      rooms.delete(roomId);
+      console.log(`[room] ${roomId}: closed (player disconnected)`);
     }
   });
 });

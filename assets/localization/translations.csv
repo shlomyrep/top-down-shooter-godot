@@ -1,0 +1,127 @@
+keys,en,he
+GAME_TITLE,RESISTANCE,התנגדות
+TAGLINE,SURVIVE · BUILD · RESIST,שרוד · בנה · התנגד
+SKIP_PROMPT,press any key to skip,לחץ על כל מקש לדילוג
+BEST_WAVE_LABEL,BEST WAVE:,גל הישג:
+NO_RECORD,—,—
+WAVE_RECORD,WAVE  %d,גל  %d
+SOLO_BTN,▶   SOLO START,▶   משחק יחיד
+MULTI_BTN,👥   MULTIPLAYER,👥   מרובה שחקנים
+FOOTER_VERSION,RESISTANCE  ·  Early Access  v0.1,התנגדות  ·  גישה מוקדמת  v0.1
+EDIT_CALLSIGN_BTN,✏ CALLSIGN,✏ שם קוד
+NAME_DIALOG_TITLE,ENTER CALLSIGN,הזן שם קוד
+NAME_PLACEHOLDER,SURVIVOR,לוחם
+CANCEL_BTN,CANCEL,ביטול
+CONFIRM_BTN,CONFIRM,אישור
+LOBBY_TITLE,MULTIPLAYER LOBBY,לובי רב-שחקנים
+LOBBY_YOU,YOU,אתה
+LOBBY_EMPTY_SLOT,EMPTY SLOT,משבצת פנויה
+LOBBY_WAITING,WAITING...,ממתין...
+LOBBY_FIND_BTN,🔍  FIND CO-OP PARTNER,🔍  חפש שותף
+LOBBY_BACK_BTN,← BACK,← חזרה
+LOBBY_READY_BTN,READY,מוכן
+LOBBY_READY_CHECKED,✓  READY,✓  מוכן
+LOBBY_START_BTN,▶  START GAME,▶  התחל משחק
+LOBBY_CONNECTING,CONNECTING TO SERVER...,מתחבר לשרת...
+LOBBY_CONNECTED,● CONNECTED TO SERVER,● מחובר לשרת
+LOBBY_NO_SERVER,"✗ CAN'T REACH SERVER  (%s:3000)","✗ לא ניתן להתחבר לשרת  (%s:3000)"
+LOBBY_OFFLINE,OFFLINE MODE,מצב לא מקוון
+LOBBY_NO_SERVER_NAME,NO SERVER,אין שרת
+LOBBY_RETRY_HINT,tap FIND to retry,הקש FIND לנסות שוב
+LOBBY_SEARCHING,SEARCHING,מחפש
+LOBBY_PARTNER_CONNECTING,connecting...,מתחבר...
+LOBBY_PARTNER_CONNECTED,✓ CONNECTED,✓ מחובר
+LOBBY_PARTNER_FOUND,✓ PARTNER FOUND,✓ שותף נמצא
+LOBBY_PARTNER_READY,✓ READY,✓ מוכן
+WAVE_LABEL,WAVE %02d,גל %02d
+BUY_PROMPT,"Buy %s — %d coins  [E]","קנה %s — %d מטבעות  [E]"
+WEAPON_SHOP_TITLE,WEAPON SHOP,חנות נשקים
+WEAPON_PISTOL,PISTOL,אקדח
+WEAPON_SHOTGUN,SHOTGUN,רובה ציד
+WEAPON_RIFLE,RIFLE,רובה
+WEAPON_LMG,LMG,מקלע
+WEAPON_PISTOL_STATS,DMG: 20  •  FREE,נזק: 20  •  חינם
+WEAPON_SHOTGUN_STATS,"DMG: 15 x5  •  75 coins","נזק: 15 x5  •  75 מטבעות"
+WEAPON_RIFLE_STATS,"DMG: 35  •  150 coins","נזק: 35  •  150 מטבעות"
+WEAPON_LMG_STATS,"DMG: 18  •  250 coins","נזק: 18  •  250 מטבעות"
+SHOP_EQUIP,EQUIP,צייד
+SHOP_EQUIPPED,EQUIPPED,מצויד
+SHOP_BUY_COST,BUY %dc,קנה %dמ
+SHOP_COST_ONLY,%dc,%dמ
+SHOP_CLOSE,CLOSE,סגור
+RECOVERY_SHOP_TITLE,RECOVERY STATION,תחנת החלמה
+RECOVERY_HEALTH,HEALTH PACK,ערכת עזרה ראשונה
+RECOVERY_HEALTH_STATS,"+50 HP  •  40 coins","+50 HP  •  40 מטבעות"
+RECOVERY_SHIELD,SHIELD,מגן
+RECOVERY_SHIELD_STATS,"+100 Shield  •  75 coins","+100 מגן  •  75 מטבעות"
+RECOVERY_BUY_HEALTH,BUY 40c,קנה 40מ
+RECOVERY_BUY_SHIELD,BUY 75c,קנה 75מ
+RECOVERY_FULL,FULL,מלא
+BUILD_PARTNER_WAITING,⏳  Waiting for partner...,⏳  ממתין לשותף...
+BUILD_PARTNER_READY,✔  Partner is READY!,✔  השותף מוכן!
+SUPPORT_COOLDOWN,⏳ %d,⏳ %d
+WAVE_1_TITLE,WAVE 1,גל 1
+WAVE_1_SUBTITLE,"Enemy forces advancing on Sector 7.
+Hold the line, soldier.","כוחות האויב מתקדמים על גזרה 7.
+עמוד בקו, חייל."
+WAVE_2_TITLE,WAVE 2,גל 2
+WAVE_2_SUBTITLE,"Reinforcements confirmed inbound.
+They are getting organized. Stay sharp.","מגבירים בדרך.
+הם מתארגנים. תישאר ערני."
+WAVE_3_TITLE,WAVE 3,גל 3
+WAVE_3_SUBTITLE,"New threat detected. Unknown hostiles inbound.
+They explode on contact. Keep your distance.","איום חדש זוהה. כוחות עוינים אלמונים בדרך.
+הם מתפוצצים במגע. שמור מרחק."
+WAVE_4_TITLE,WAVE 4,גל 4
+WAVE_4_SUBTITLE,"They are pushing harder. No signs of slowing down.
+Defend your perimeter.","הם לוחצים חזק יותר. אין סימנים להאטה.
+הגן על ההיקף שלך."
+WAVE_5_TITLE,WAVE 5,גל 5
+WAVE_5_SUBTITLE,"Heavy units inbound. Cannon soldiers target your walls.
+Reinforce your defenses before they breach.","יחידות כבדות בדרך. חיילי תותח מכוונים לחומותיך.
+חזק את ההגנות לפני שיפרצו."
+WAVE_6_TITLE,WAVE 6,גל 6
+WAVE_6_SUBTITLE,"They are adapting. More cannons, more firepower.
+Fortify and hold.","הם מסתגלים. יותר תותחים, יותר עוצמת אש.
+חזק והחזק."
+WAVE_7_TITLE,WAVE 7 — BOSS,גל 7 — בוס
+WAVE_7_SUBTITLE,"THE TANK IS HERE. One armored unit — nearly indestructible.
+Destroy it before it destroys everything.","הטנק כאן. יחידה משוריינת אחת — כמעט בלתי ניתנת להשמדה.
+השמד אותה לפני שהיא תשמיד הכל."
+WAVE_AUTO_TITLE,WAVE %d,גל %d
+WAVE_AUTO_SUBTITLE,"More hostiles inbound. Stay disciplined, stay alive.","עוד כוחות עוינים בדרך. תישאר ממושמע, תישאר בחיים."
+WAVE_SUFFIX_COMPLETE,COMPLETE,הושלם
+DOWNED_OVERLAY,"YOU ARE DOWN
+Waiting for your partner to revive you...","אתה מת
+ממתין לשותפך שיחייה אותך..."
+REVIVING_LABEL,REVIVING...,מחייה...
+PARTNER_DOWN_BANNER,⚠  PARTNER DOWN  –  GAME OVER,⚠  השותף נפל  –  סיום משחק
+PARTNER_DISCONNECTED_BANNER,⚡  PARTNER DISCONNECTED,⚡  השותף התנתק
+PARTNER_DOWN_LABEL,⚠ %s DOWN,⚠ %s נפל
+DISTANCE_LABEL,%.0fm,%.0fm
+GAME_OVER_TITLE,GAME  OVER,סיום  משחק
+WAVE_REACHED_LABEL,WAVE REACHED,גל הגעה
+NEW_RECORD_BADGE,✨  NEW RECORD!,✨  שיא חדש!
+BEST_WAVE_ROW,🏆  BEST:,🏆  הישג:
+PLAY_AGAIN_BTN,▶  PLAY AGAIN,▶  שחק שוב
+MAIN_MENU_BTN,⬅  MAIN MENU,⬅  תפריט ראשי
+TUTORIAL_0,"Build your base!
+Tap CAMP to choose
+a structure template","בנה את הבסיס שלך!
+הקש CAMP לבחור
+תבנית מבנה"
+TUTORIAL_1,"Move to position
+then tap BUILD
+to place your camp","התקדם למיקום
+ואז הקש BUILD
+להציב את המחנה"
+TUTORIAL_2,"Tap to Open or
+Close your
+camp GATES!","הקש לפתוח או
+לסגור את
+שערי המחנה!"
+TUTORIAL_4,"Need backup?
+Tap here to call
+a SQUAD to your aid!","צריך גיבוי?
+הקש כאן לקרוא
+לצוות לעזרתך!"

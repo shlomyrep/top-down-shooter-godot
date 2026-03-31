@@ -8,6 +8,16 @@
 
 config_version=5
 
+[gui]
+
+theme/default_font="res://assets/fonts/NotoSansHebrew-Regular.ttf"
+theme/default_font_size=16
+
+[internationalization]
+
+locale/translations=PackedStringArray("res://assets/localization/translations.en.translation", "res://assets/localization/translations.he.translation")
+locale/fallback="en"
+
 [animation]
 
 compatibility/default_parent_skeleton_in_mesh_instance_3d=true
@@ -17,7 +27,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 config/name="Resistance"
 run/main_scene="res://scenes/splash_screen.tscn"
 config/features=PackedStringArray("4.6")
-config/icon="res://icon.svg"
+config/icon="res://assets/ui/fist_icon.png"
 
 [autoload]
 

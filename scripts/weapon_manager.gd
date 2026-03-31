@@ -3,7 +3,7 @@ extends Node
 # ─── Weapon definitions ───────────────────────────────────────────────────────
 const WEAPONS: Dictionary = {
 	"pistol": {
-		"name":         "Pistol",
+		"name":         "WEAPON_PISTOL",
 		"cost":         0,
 		"damage":       20,
 		"cooldown":     0.25,
@@ -14,7 +14,7 @@ const WEAPONS: Dictionary = {
 		"bullet_scale": 1.0,
 	},
 	"shotgun": {
-		"name":         "Shotgun",
+		"name":         "WEAPON_SHOTGUN",
 		"cost":         75,
 		"damage":       15,
 		"cooldown":     0.7,
@@ -25,7 +25,7 @@ const WEAPONS: Dictionary = {
 		"bullet_scale": 0.7,
 	},
 	"rifle": {
-		"name":         "Rifle",
+		"name":         "WEAPON_RIFLE",
 		"cost":         150,
 		"damage":       35,
 		"cooldown":     0.10,
@@ -36,7 +36,7 @@ const WEAPONS: Dictionary = {
 		"bullet_scale": 1.3,
 	},
 	"lmg": {
-		"name":         "LMG",
+		"name":         "WEAPON_LMG",
 		"cost":         250,
 		"damage":       18,
 		"cooldown":     0.06,

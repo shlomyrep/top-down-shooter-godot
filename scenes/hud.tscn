@@ -155,7 +155,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-layout_direction = 1
+layout_direction = 2
 script = ExtResource("1_hud")
 
 [node name="WaveTransitionPanel" type="PanelContainer" parent="."]
@@ -581,7 +581,8 @@ theme_override_constants/separation = 8
 
 [node name="TitleLabel" type="Label" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox"]
 layout_mode = 2
-text = "WEAPON SHOP"
+text = "WEAPON_SHOP_TITLE"
+auto_translate_mode = 1
 theme_override_font_sizes/font_size = 28
 horizontal_alignment = 1
 modulate = Color(1.0, 0.85, 0.1, 1.0)
@@ -606,19 +607,22 @@ theme_override_constants/separation = 2
 
 [node name="NameLabel" type="Label" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/PistolCard/HBox/Info"]
 layout_mode = 2
-text = "PISTOL"
+text = "WEAPON_PISTOL"
+auto_translate_mode = 1
 theme_override_font_sizes/font_size = 18
 
 [node name="StatsLabel" type="Label" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/PistolCard/HBox/Info"]
 layout_mode = 2
-text = "DMG: 20  •  FREE"
+text = "WEAPON_PISTOL_STATS"
+auto_translate_mode = 1
 theme_override_font_sizes/font_size = 14
 modulate = Color(0.7, 0.7, 0.7, 1.0)
 
 [node name="PistolBuyBtn" type="Button" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/PistolCard/HBox"]
 layout_mode = 2
 custom_minimum_size = Vector2(100, 40)
-text = "EQUIP"
+text = "SHOP_EQUIP"
+auto_translate_mode = 1
 
 [node name="ShotgunCard" type="PanelContainer" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox"]
 layout_mode = 2
@@ -640,12 +644,14 @@ theme_override_constants/separation = 2
 
 [node name="NameLabel" type="Label" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/ShotgunCard/HBox/Info"]
 layout_mode = 2
-text = "SHOTGUN"
+text = "WEAPON_SHOTGUN"
+auto_translate_mode = 1
 theme_override_font_sizes/font_size = 18
 
 [node name="StatsLabel" type="Label" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/ShotgunCard/HBox/Info"]
 layout_mode = 2
-text = "DMG: 15 x5  •  75 coins"
+text = "WEAPON_SHOTGUN_STATS"
+auto_translate_mode = 1
 theme_override_font_sizes/font_size = 14
 modulate = Color(0.7, 0.7, 0.7, 1.0)
 
@@ -674,12 +680,14 @@ theme_override_constants/separation = 2
 
 [node name="NameLabel" type="Label" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/RifleCard/HBox/Info"]
 layout_mode = 2
-text = "RIFLE"
+text = "WEAPON_RIFLE"
+auto_translate_mode = 1
 theme_override_font_sizes/font_size = 18
 
 [node name="StatsLabel" type="Label" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/RifleCard/HBox/Info"]
 layout_mode = 2
-text = "DMG: 35  •  150 coins"
+text = "WEAPON_RIFLE_STATS"
+auto_translate_mode = 1
 theme_override_font_sizes/font_size = 14
 modulate = Color(0.7, 0.7, 0.7, 1.0)
 
@@ -708,12 +716,14 @@ theme_override_constants/separation = 2
 
 [node name="NameLabel" type="Label" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/LmgCard/HBox/Info"]
 layout_mode = 2
-text = "LMG"
+text = "WEAPON_LMG"
+auto_translate_mode = 1
 theme_override_font_sizes/font_size = 18
 
 [node name="StatsLabel" type="Label" parent="WeaponShopOverlay/Center/ShopPanel/Margin/VBox/LmgCard/HBox/Info"]
 layout_mode = 2
-text = "DMG: 18  •  250 coins"
+text = "WEAPON_LMG_STATS"
+auto_translate_mode = 1
 theme_override_font_sizes/font_size = 14
 modulate = Color(0.7, 0.7, 0.7, 1.0)
 
@@ -760,7 +770,8 @@ theme_override_constants/separation = 8
 
 [node name="TitleLabel" type="Label" parent="RecoveryShopOverlay/Center/ShopPanel/Margin/VBox"]
 layout_mode = 2
-text = "RECOVERY STATION"
+text = "RECOVERY_SHOP_TITLE"
+auto_translate_mode = 1
 theme_override_font_sizes/font_size = 28
 horizontal_alignment = 1
 modulate = Color(0.4, 0.8, 1.0, 1.0)
@@ -785,12 +796,14 @@ theme_override_constants/separation = 2
 
 [node name="NameLabel" type="Label" parent="RecoveryShopOverlay/Center/ShopPanel/Margin/VBox/HealthCard/HBox/Info"]
 layout_mode = 2
-text = "HEALTH PACK"
+text = "RECOVERY_HEALTH"
+auto_translate_mode = 1
 theme_override_font_sizes/font_size = 18
 
 [node name="StatsLabel" type="Label" parent="RecoveryShopOverlay/Center/ShopPanel/Margin/VBox/HealthCard/HBox/Info"]
 layout_mode = 2
-text = "+50 HP  •  40 coins"
+text = "RECOVERY_HEALTH_STATS"
+auto_translate_mode = 1
 theme_override_font_sizes/font_size = 14
 modulate = Color(0.7, 0.7, 0.7, 1.0)
 
@@ -819,12 +832,14 @@ theme_override_constants/separation = 2
 
 [node name="NameLabel" type="Label" parent="RecoveryShopOverlay/Center/ShopPanel/Margin/VBox/ShieldCard/HBox/Info"]
 layout_mode = 2
-text = "SHIELD"
+text = "RECOVERY_SHIELD"
+auto_translate_mode = 1
 theme_override_font_sizes/font_size = 18
 
 [node name="StatsLabel" type="Label" parent="RecoveryShopOverlay/Center/ShopPanel/Margin/VBox/ShieldCard/HBox/Info"]
 layout_mode = 2
-text = "+100 Shield  •  75 coins"
+text = "RECOVERY_SHIELD_STATS"
+auto_translate_mode = 1
 theme_override_font_sizes/font_size = 14
 modulate = Color(0.7, 0.7, 0.7, 1.0)
 

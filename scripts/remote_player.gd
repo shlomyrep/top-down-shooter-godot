@@ -187,7 +187,7 @@ func set_downed(downed_state: bool) -> void:
 	if downed_state:
 		_body.modulate = Color(1.0, 0.25, 0.25, 0.85)  # Red tint — partner is down
 		_body.play("idle")
-		_name_lbl.text = "⚠ " + GameData.partner_name + " DOWN"
+		_name_lbl.text = tr("PARTNER_DOWN_LABEL") % [GameData.partner_name]
 	else:
 		_body.modulate = Color(0.55, 0.95, 1.0, 1.0)   # Restore cyan
 		_name_lbl.text = GameData.partner_name

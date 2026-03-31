@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://splash001"]
 
 [ext_resource type="Script" path="res://scripts/splash_screen.gd" id="1_ss"]
+[ext_resource type="Texture2D" path="res://assets/ui/fist_icon.png" id="2_icon"]
 
 [node name="SplashScreen" type="Control"]
 anchors_preset = 15
@@ -25,11 +26,11 @@ anchor_bottom = 1.0
 theme_override_constants/separation = 16
 alignment = 1
 
-[node name="FistLabel" type="Label" parent="CenterContainer/VBox"]
-text = "✊"
-horizontal_alignment = 1
-theme_override_font_sizes/font_size = 100
-theme_override_colors/font_color = Color(1.0, 0.68, 0.1, 1.0)
+[node name="FistIcon" type="TextureRect" parent="CenterContainer/VBox"]
+custom_minimum_size = Vector2(128, 128)
+size_flags_horizontal = 4
+stretch_mode = 5
+texture = ExtResource("2_icon")
 
 [node name="TitleLabel" type="Label" parent="CenterContainer/VBox"]
 text = "RESISTANCE"

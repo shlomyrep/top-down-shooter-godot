@@ -54,7 +54,8 @@ theme_override_constants/margin_bottom = 40
 theme_override_constants/separation = 20
 
 [node name="GameOverLabel" type="Label" parent="CenterContainer/Panel/Margin/VBox"]
-text = "GAME  OVER"
+text = "GAME_OVER_TITLE"
+auto_translate_mode = 1
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 54
 theme_override_colors/font_color = Color(0.9, 0.15, 0.15, 1.0)
@@ -67,7 +68,8 @@ alignment = 1
 theme_override_constants/separation = 16
 
 [node name="WavePrefixLabel" type="Label" parent="CenterContainer/Panel/Margin/VBox/WaveRow"]
-text = "WAVE REACHED"
+text = "WAVE_REACHED_LABEL"
+auto_translate_mode = 1
 vertical_alignment = 1
 theme_override_font_sizes/font_size = 18
 theme_override_colors/font_color = Color(0.58, 0.62, 0.82, 1.0)
@@ -89,7 +91,8 @@ theme_override_constants/margin_top = 8
 theme_override_constants/margin_bottom = 8
 
 [node name="NewRecordLabel" type="Label" parent="CenterContainer/Panel/Margin/VBox/NewRecordBadge/RecordMargin"]
-text = "✨  NEW RECORD!"
+text = "NEW_RECORD_BADGE"
+auto_translate_mode = 1
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 20
 theme_override_colors/font_color = Color(1.0, 0.95, 0.45, 1.0)
@@ -99,7 +102,8 @@ alignment = 1
 theme_override_constants/separation = 10
 
 [node name="BestLabel" type="Label" parent="CenterContainer/Panel/Margin/VBox/BestRow"]
-text = "🏆  BEST:"
+text = "BEST_WAVE_ROW"
+auto_translate_mode = 1
 vertical_alignment = 1
 theme_override_font_sizes/font_size = 16
 theme_override_colors/font_color = Color(0.48, 0.56, 0.78, 1.0)
@@ -115,10 +119,12 @@ alignment = 1
 theme_override_constants/separation = 16
 
 [node name="PlayAgainBtn" type="Button" parent="CenterContainer/Panel/Margin/VBox/ButtonRow"]
-text = "▶  PLAY AGAIN"
+text = "PLAY_AGAIN_BTN"
+auto_translate_mode = 1
 
 [node name="MainMenuBtn" type="Button" parent="CenterContainer/Panel/Margin/VBox/ButtonRow"]
-text = "⬅  MAIN MENU"
+text = "MAIN_MENU_BTN"
+auto_translate_mode = 1
 
 [connection signal="pressed" from="CenterContainer/Panel/Margin/VBox/ButtonRow/PlayAgainBtn" to="." method="_on_play_again_btn_pressed"]
 [connection signal="pressed" from="CenterContainer/Panel/Margin/VBox/ButtonRow/MainMenuBtn" to="." method="_on_main_menu_btn_pressed"]

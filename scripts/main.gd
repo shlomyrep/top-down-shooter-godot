@@ -1073,12 +1073,12 @@ func _on_remote_bullet_fired(data: Dictionary) -> void:
 	add_child(bullet)
 
 func _on_partner_died() -> void:
-	_show_partner_event("⚠  PARTNER DOWN  –  GAME OVER")
+	_show_partner_event(tr("PARTNER_DOWN_BANNER"))
 	await get_tree().create_timer(2.5).timeout
 	_on_player_died()
 
 func _on_partner_disconnected() -> void:
-	_show_partner_event("⚡  PARTNER DISCONNECTED")
+	_show_partner_event(tr("PARTNER_DISCONNECTED_BANNER"))
 	await get_tree().create_timer(2.5).timeout
 	_on_player_died()
 
@@ -1299,7 +1299,7 @@ func _show_downed_overlay() -> void:
 	_downed_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_downed_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var lbl := Label.new()
-	lbl.text = "YOU ARE DOWN\nWaiting for your partner to revive you..."
+	lbl.text = tr("DOWNED_OVERLAY")
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
 	lbl.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -1328,7 +1328,7 @@ func _show_revive_bar(fill: float) -> void:
 		_revive_bar_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var lbl := Label.new()
 		lbl.name = "ReviveLbl"
-		lbl.text = "REVIVING..."
+		lbl.text = tr("REVIVING_LABEL")
 		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lbl.size = Vector2(400.0, 30.0)
 		var ls := LabelSettings.new()
@@ -1392,7 +1392,7 @@ func _update_partner_compass() -> void:
 	var arrows  := ["→", "↘", "↓", "↙", "←", "↖", "↑", "↗"]
 	var sector  := int(fmod(angle_deg + 360.0 + 22.5, 360.0) / 45.0) % 8
 	_partner_compass.get_node("Arrow").text = arrows[sector]
-	_partner_compass.get_node("Dist").text  = "%.0fm" % (dist / 80.0)
+	_partner_compass.get_node("Dist").text  = tr("DISTANCE_LABEL") % (dist / 80.0)
 	_partner_compass.modulate.a = 0.3 if dist < 200.0 else 1.0
 
 func _update_revive_proximity(delta: float) -> void:

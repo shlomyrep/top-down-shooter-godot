@@ -70,10 +70,30 @@ const _SFX_PATH   := "res://assets/audio/sfx/"
 const _MUSIC_PATH := "res://assets/audio/music/"
 const _VOICE_PATH := "res://assets/audio/voice/"
 
+# ─── Language ──────────────────────────────────────────────────────────────────
+## Supported language codes. Voice files live in assets/audio/voice/{lang}/
+const SUPPORTED_LANGUAGES := ["en", "he"]
+const DEFAULT_LANGUAGE     := "en"
+## Active language — set via set_language(). Synced from GameData on _ready.
+var language := DEFAULT_LANGUAGE
+
 # ─────────────────────────────────────────────────────────────────────────────
 func _ready() -> void:
 	_setup_buses()
 	_build_players()
+	# Sync language from persisted GameData on startup.
+	# If the user has never explicitly chosen a language (still default "en"),
+	# try to match the system locale first so Hebrew devices get Hebrew voices.
+	if GameData and GameData.voice_language in SUPPORTED_LANGUAGES:
+		language = GameData.voice_language
+	else:
+		language = _locale_to_language(OS.get_locale_language())
+
+# Returns the best supported language for a given ISO 639-1 locale code.
+func _locale_to_language(locale_code: String) -> String:
+	if locale_code in SUPPORTED_LANGUAGES:
+		return locale_code
+	return DEFAULT_LANGUAGE
 
 # ─── Bus Setup ───────────────────────────────────────────────────────────────
 func _setup_buses() -> void:
@@ -291,8 +311,34 @@ func play_ambient(sound_name: String) -> void:
 	_ambient_player.stream = stream
 	_ambient_player.play()
 
-## Queue a voice line. CRITICAL interrupts any current line.
-## HIGH interrupts NORMAL. Duplicate NORMAL lines while one is playing are dropped.
+## Change the active voice language at runtime.
+## lang must be one of SUPPORTED_LANGUAGES; invalid codes are silently ignored.
+## Clears the voice cache so new files are loaded immediately.
+func set_language(lang: String) -> void:
+	if lang not in SUPPORTED_LANGUAGES:
+		return
+	if lang == language:
+		return
+	language = lang
+	GameData.voice_language = lang
+	GameData.force_save()
+	# Flush cached voice entries so next play loads the new language
+	var to_remove: Array[String] = []
+	for key: String in _cache:
+		if key.begins_with(_VOICE_PATH):
+			to_remove.append(key)
+	for key in to_remove:
+		_cache.erase(key)
+	_voice_queue.clear()
+	_voice_player.stop()
+	_voice_current_priority = -1
+
+## Returns the active language code (e.g. "en", "he").
+func get_language() -> String:
+	return language
+
+
+## Tries current language first; falls back to English if not found.
 func play_voice(voice_name: String, priority: int = VoicePriority.NORMAL) -> void:
 	var stream := _load_voice(voice_name)
 	if not stream:
@@ -392,7 +438,11 @@ func _load_music(name: String) -> AudioStream:
 	return _load(_MUSIC_PATH + name + ".ogg")
 
 func _load_voice(name: String) -> AudioStream:
-	return _load(_VOICE_PATH + name + ".ogg")
+	# Try active language first, then fall back to English
+	var lang_stream := _load(_VOICE_PATH + language + "/" + name + ".ogg")
+	if lang_stream:
+		return lang_stream
+	return _load(_VOICE_PATH + DEFAULT_LANGUAGE + "/" + name + ".ogg")
 
 func _load(path: String) -> AudioStream:
 	if _cache.has(path):

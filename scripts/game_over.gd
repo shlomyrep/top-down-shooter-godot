@@ -7,11 +7,11 @@ extends Control
 func _ready() -> void:
 	var last_wave := GameData.get_last_wave()
 	var record    := GameData.record_wave
-	wave_number_label.text = str(last_wave) if last_wave > 0 else "—"
-	best_wave_label.text   = str(record)    if record > 0    else "—"
+	wave_number_label.text = str(last_wave) if last_wave > 0 else tr("NO_RECORD")
+	best_wave_label.text   = str(record)    if record > 0    else tr("NO_RECORD")
 	new_record_badge.visible = (last_wave > 0 and last_wave == record)
 
-	# Multiplayer: show each player's kill count
+	# Multiplayer: show each player's kill count + Add Friend button
 	if GameData.is_multiplayer:
 		var kills_lbl := Label.new()
 		kills_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -26,6 +26,21 @@ func _ready() -> void:
 		ls.outline_color = Color(0.0, 0.0, 0.0, 0.8)
 		kills_lbl.label_settings = ls
 		$CenterContainer/Panel/Margin/VBox.add_child(kills_lbl)
+
+		# Add Friend button
+		var add_btn := Button.new()
+		var p_name := GameData.partner_name
+		if GameData.has_friend(p_name):
+			add_btn.text = "✓ Already friends with " + p_name
+			add_btn.disabled = true
+		else:
+			add_btn.text = "➕ Add " + p_name + " as Friend"
+			add_btn.pressed.connect(func():
+				GameData.add_friend(p_name)
+				add_btn.text = "✓ Added " + p_name
+				add_btn.disabled = true
+			)
+		$CenterContainer/Panel/Margin/VBox.add_child(add_btn)
 
 	# Fade in panel
 	var panel := $CenterContainer/Panel

@@ -1,6 +1,9 @@
 [gd_scene format=3 uid="uid://mainmenu01"]
 
 [ext_resource type="Script" path="res://scripts/main_menu.gd" id="1_mm"]
+[ext_resource type="Texture2D" path="res://assets/ui/fist_icon.png" id="2_icon"]
+[ext_resource type="Texture2D" path="res://assets/ui/trophy_icon.png" id="3_trophy"]
+[ext_resource type="Texture2D" path="res://assets/ui/multiplayer_icon.png" id="4_multi"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
 bg_color = Color(0.06, 0.08, 0.16, 0.95)
@@ -69,20 +72,22 @@ theme_override_constants/separation = 18
 alignment = 1
 theme_override_constants/separation = 12
 
-[node name="FistLabel" type="Label" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox/HeaderBox"]
-text = "✊"
-vertical_alignment = 1
-theme_override_font_sizes/font_size = 52
-theme_override_colors/font_color = Color(1.0, 0.68, 0.1, 1.0)
+[node name="FistIcon" type="TextureRect" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox/HeaderBox"]
+custom_minimum_size = Vector2(52, 52)
+size_flags_vertical = 4
+stretch_mode = 5
+texture = ExtResource("2_icon")
 
 [node name="TitleLabel" type="Label" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox/HeaderBox"]
-text = "RESISTANCE"
+text = "GAME_TITLE"
+auto_translate_mode = 1
 vertical_alignment = 1
 theme_override_font_sizes/font_size = 50
 theme_override_colors/font_color = Color(0.95, 0.95, 1.0, 1.0)
 
 [node name="TaglineLabel" type="Label" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox"]
-text = "SURVIVE · BUILD · RESIST"
+text = "TAGLINE"
+auto_translate_mode = 1
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 15
 theme_override_colors/font_color = Color(0.48, 0.58, 0.8, 1.0)
@@ -102,13 +107,15 @@ theme_override_constants/margin_bottom = 10
 [node name="HBox" type="HBoxContainer" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox/RecordPanel/Margin"]
 theme_override_constants/separation = 8
 
-[node name="TrophyLabel" type="Label" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox/RecordPanel/Margin/HBox"]
-text = "🏆"
-vertical_alignment = 1
-theme_override_font_sizes/font_size = 20
+[node name="TrophyIcon" type="TextureRect" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox/RecordPanel/Margin/HBox"]
+custom_minimum_size = Vector2(32, 32)
+size_flags_vertical = 4
+stretch_mode = 5
+texture = ExtResource("3_trophy")
 
 [node name="RecordHeaderLabel" type="Label" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox/RecordPanel/Margin/HBox"]
-text = "BEST WAVE:"
+text = "BEST_WAVE_LABEL"
+auto_translate_mode = 1
 vertical_alignment = 1
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 17
@@ -129,17 +136,21 @@ theme_override_constants/separation = 12
 
 [node name="SoloBtn" type="Button" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox/Buttons"]
 size_flags_horizontal = 3
-text = "▶   SOLO START"
+text = "SOLO_BTN"
+auto_translate_mode = 1
 
 [node name="MultiBtn" type="Button" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox/Buttons"]
 size_flags_horizontal = 3
-text = "👥   MULTIPLAYER"
+text = "MULTI_BTN"
+auto_translate_mode = 1
+icon = ExtResource("4_multi")
 
 [node name="Spacer2" type="Control" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox"]
 custom_minimum_size = Vector2(0, 2)
 
 [node name="VersionLabel" type="Label" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox"]
-text = "RESISTANCE  ·  Early Access  v0.1"
+text = "FOOTER_VERSION"
+auto_translate_mode = 1
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 11
 theme_override_colors/font_color = Color(0.28, 0.32, 0.48, 0.75)
@@ -165,7 +176,8 @@ theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(0.38, 0.48, 0.72, 0.85)
 
 [node name="EditNameBtn" type="Button" parent="BottomBar"]
-text = "✏ CALLSIGN"
+text = "EDIT_CALLSIGN_BTN"
+auto_translate_mode = 1
 flat = true
 theme_override_font_sizes/font_size = 13
 theme_override_colors/font_color = Color(0.38, 0.62, 0.92, 0.85)
@@ -205,13 +217,15 @@ theme_override_constants/margin_bottom = 24
 theme_override_constants/separation = 16
 
 [node name="DialogTitle" type="Label" parent="NameDialog/DialogCenter/DialogPanel/DialogMargin/DialogVBox"]
-text = "ENTER CALLSIGN"
+text = "NAME_DIALOG_TITLE"
+auto_translate_mode = 1
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 20
 theme_override_colors/font_color = Color(0.82, 0.88, 1.0, 1.0)
 
 [node name="NameEdit" type="LineEdit" parent="NameDialog/DialogCenter/DialogPanel/DialogMargin/DialogVBox"]
-placeholder_text = "SURVIVOR"
+placeholder_text = "NAME_PLACEHOLDER"
+auto_translate_mode = 1
 max_length = 16
 
 [node name="BtnRow" type="HBoxContainer" parent="NameDialog/DialogCenter/DialogPanel/DialogMargin/DialogVBox"]
@@ -219,10 +233,12 @@ alignment = 2
 theme_override_constants/separation = 10
 
 [node name="CancelBtn" type="Button" parent="NameDialog/DialogCenter/DialogPanel/DialogMargin/DialogVBox/BtnRow"]
-text = "CANCEL"
+text = "CANCEL_BTN"
+auto_translate_mode = 1
 
 [node name="ConfirmBtn" type="Button" parent="NameDialog/DialogCenter/DialogPanel/DialogMargin/DialogVBox/BtnRow"]
-text = "CONFIRM"
+text = "CONFIRM_BTN"
+auto_translate_mode = 1
 
 [connection signal="pressed" from="CenterContainer/MainPanel/PanelMargin/InnerVBox/Buttons/SoloBtn" to="." method="_on_solo_btn_pressed"]
 [connection signal="pressed" from="CenterContainer/MainPanel/PanelMargin/InnerVBox/Buttons/MultiBtn" to="." method="_on_multi_btn_pressed"]

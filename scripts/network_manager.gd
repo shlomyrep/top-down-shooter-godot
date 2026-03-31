@@ -45,6 +45,12 @@ signal remote_player_downed(data: Dictionary)
 signal remote_player_revived(data: Dictionary)
 # Game over sync (carries kills count)
 signal remote_game_over_sync(data: Dictionary)
+# Room code matchmaking
+signal room_created(code: String)
+signal join_error(message: String)
+# Online presence & invites
+signal friends_online_status(online_names: Array)
+signal friend_invite_received(data: Dictionary)
 
 # ── Private state ──────────────────────────────────────────────────────────────
 var _socket:    WebSocketPeer
@@ -87,12 +93,15 @@ func is_online() -> bool:
 func get_room_id() -> String:
 	return _room_id
 
-# Matchmaking
-func find_match(player_name: String) -> void:
-	_emit_sio("find_match", {"player_name": player_name})
+# Matchmaking (room codes)
+func send_create_room() -> void:
+	_emit_sio("create_room", {"player_name": GameData.player_name})
 
-func cancel_search() -> void:
-	_emit_sio("cancel_search", {})
+func send_join_room(code: String) -> void:
+	_emit_sio("join_room", {"code": code, "player_name": GameData.player_name})
+
+func cancel_room() -> void:
+	_emit_sio("cancel_room", {})
 
 func send_ready() -> void:
 	_emit_sio("player_ready", {"room_id": _room_id})
@@ -169,6 +178,13 @@ func send_player_revived() -> void:
 func send_game_over_sync(kills: int) -> void:
 	_emit_sio("game_over_sync", {"room_id": _room_id, "kills": kills})
 
+# Online presence
+func send_check_friends_online(friends: Array) -> void:
+	_emit_sio("check_friends_online", {"friends": friends})
+
+func send_ping_friend(target_name: String, room_code: String) -> void:
+	_emit_sio("ping_friend", {"target_name": target_name, "from_name": GameData.player_name, "room_code": room_code})
+
 # ── Godot process loop ─────────────────────────────────────────────────────────
 
 func _process(delta: float) -> void:
@@ -222,6 +238,7 @@ func _handle_sio(msg: String) -> void:
 	match msg[0]:
 		"0":  # SIO CONNECT (namespace confirmed)
 			_connected = true
+			_emit_sio("register_online", {"player_name": GameData.player_name})
 			connected_to_server.emit()
 		"1":  # SIO DISCONNECT
 			_connected = false
@@ -237,8 +254,12 @@ func _dispatch(payload: String) -> void:
 	var data: Dictionary = parsed[1] if parsed.size() > 1 and parsed[1] is Dictionary else {}
 
 	match event_name:
-		"searching":
-			pass  # server acknowledged; lobby handles UI
+		"room_created":
+			_room_id         = str(data.get("room_id", ""))
+			GameData.room_id = _room_id
+			room_created.emit(str(data.get("code", "")))
+		"join_error":
+			join_error.emit(str(data.get("message", "")))
 		"match_found":
 			_room_id              = str(data.get("room_id", ""))
 			GameData.room_id      = _room_id
@@ -297,6 +318,10 @@ func _dispatch(payload: String) -> void:
 			remote_player_revived.emit(data)
 		"remote_game_over_sync":
 			remote_game_over_sync.emit(data)
+		"friends_online_status":
+			friends_online_status.emit(data.get("online_names", []))
+		"friend_invite":
+			friend_invite_received.emit(data)
 
 func _emit_sio(event_name: String, data: Dictionary) -> void:
 	if not _socket or _socket.get_ready_state() != WebSocketPeer.STATE_OPEN:

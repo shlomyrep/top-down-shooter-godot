@@ -132,11 +132,11 @@ func _show_step(idx: int) -> void:
 	match idx:
 		STEP_CAMP:
 			_target_node = _hud.get_node_or_null("BuildPanel/VBox/Palette/TemplateBtn")
-			_msg_label.text = "Build your base!\nTap CAMP to choose\na structure template"
+			_msg_label.text = tr("TUTORIAL_0")
 
 		STEP_BUILD:
 			_target_node = _hud.get_node_or_null("PlaceBtn")
-			_msg_label.text = "Move to position\nthen tap BUILD\nto place your camp"
+			_msg_label.text = tr("TUTORIAL_1")
 
 		STEP_DOORS:
 			# Only show if the player actually has doors placed
@@ -144,11 +144,11 @@ func _show_step(idx: int) -> void:
 				_hide()
 				return
 			_target_node = _hud.get_node_or_null("DoorToggleBtn")
-			_msg_label.text = "Tap to Open or\nClose your\ncamp GATES!"
+			_msg_label.text = tr("TUTORIAL_2")
 
 		STEP_SQUAD:
 			_target_node = _hud.get_node_or_null("SupportPanel/VBox/SquadBtn")
-			_msg_label.text = "Need backup?\nTap here to call\na SQUAD to your aid!"
+			_msg_label.text = tr("TUTORIAL_4")
 
 		_:
 			_finish()
@@ -180,7 +180,7 @@ func _process(_delta: float) -> void:
 	var fh: float = FINGER_H
 
 	# Finger points upward — place it BELOW the button so it points at it
-	var fy: float = rect.position.y + rect.size.y + 6.0 + bounce
+	var fy: float = rect.position.y + rect.size.y + 6.0 + bounce - 10.0
 
 	# If no room below, flip above so the finger still points at the button
 	var flipped: bool = false
