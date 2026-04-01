@@ -877,6 +877,9 @@ func _try_place_template() -> void:
 		BuildManager.register(entry.cell, structure)
 		if GameData.is_multiplayer:
 			NetworkManager.send_structure_placed(entry.type, entry.cell.x, entry.cell.y)
+	# Clear camp selection after placing so the preview dots disappear
+	BuildManager.selected = "wall"
+	_hide_template_preview()
 
 func _on_player_health_changed(current: int, maximum: int) -> void:
 	hud.update_health(current, maximum)
