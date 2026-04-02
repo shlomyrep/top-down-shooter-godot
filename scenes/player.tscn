@@ -39,7 +39,7 @@ height = 32
 
 [node name="Player" type="CharacterBody2D"]
 collision_layer = 1
-collision_mask = 42
+collision_mask = 170
 script = ExtResource("1_player")
 
 [node name="Shadow" type="Sprite2D" parent="."]

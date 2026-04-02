@@ -45,6 +45,9 @@ signal remote_player_downed(data: Dictionary)
 signal remote_player_revived(data: Dictionary)
 # Game over sync (carries kills count)
 signal remote_game_over_sync(data: Dictionary)
+# Reconnect
+signal partner_reconnected
+signal partner_reconnect_failed
 # Room code matchmaking
 signal room_created(code: String)
 signal join_error(message: String)
@@ -58,6 +61,14 @@ var _connected: bool   = false
 var _room_id:   String = ""
 var _connect_timer: float = 0.0
 const _CONNECT_TIMEOUT := 10.0  # seconds before giving up
+
+# ── Reconnect state ────────────────────────────────────────────────────────────
+var _is_game_active:    bool   = false  # set true on game_start, false on explicit disconnect
+var _is_reconnecting:   bool   = false
+var _saved_room_id:     String = ""    # retained across the drop so we can rejoin
+var _reconnect_elapsed: float  = 0.0
+const _RECONNECT_INTERVAL := 4.0  # seconds between reconnect attempts
+const _RECONNECT_TIMEOUT  := 65.0 # give up after this (matches server 60s grace + margin)
 
 # ── Lifecycle ──────────────────────────────────────────────────────────────────
 
@@ -85,6 +96,9 @@ func disconnect_from_server() -> void:
 		_socket.close()
 	_connected = false
 	_room_id   = ""
+	_is_game_active  = false
+	_is_reconnecting = false
+	_saved_room_id   = ""
 	set_process(false)
 
 func is_online() -> bool:
@@ -188,6 +202,25 @@ func send_ping_friend(target_name: String, room_code: String) -> void:
 # ── Godot process loop ─────────────────────────────────────────────────────────
 
 func _process(delta: float) -> void:
+	# Reconnect loop — runs even when _socket is null while waiting to retry
+	if _is_reconnecting and not _socket:
+		_reconnect_elapsed += delta
+		if _reconnect_elapsed >= _RECONNECT_TIMEOUT:
+			# Give up — game will handle this via partner_reconnect_failed
+			_is_reconnecting = false
+			_saved_room_id   = ""
+			set_process(false)
+			return
+		if fmod(_reconnect_elapsed, _RECONNECT_INTERVAL) < delta:
+			# Attempt a new connection
+			_socket = WebSocketPeer.new()
+			_connect_timer = 0.0
+			var err := _socket.connect_to_url(SERVER_URL)
+			if err != OK:
+				_socket = null
+				push_warning("NetworkManager: reconnect attempt failed")
+		return
+
 	if not _socket:
 		return
 	_socket.poll()
@@ -200,8 +233,9 @@ func _process(delta: float) -> void:
 			_socket = null
 			_connected = false
 			_room_id   = ""
-			set_process(false)
-			disconnected_from_server.emit()
+			if not _is_reconnecting:
+				set_process(false)
+				disconnected_from_server.emit()
 		return
 	if state == WebSocketPeer.STATE_OPEN:
 		_connect_timer = 0.0
@@ -210,12 +244,20 @@ func _process(delta: float) -> void:
 	elif state == WebSocketPeer.STATE_CLOSED:
 		var was_connected := _connected
 		_connected = false
-		_room_id   = ""
 		_socket    = null
-		set_process(false)
-		# Emit regardless of whether we were fully connected — 
-		# covers the case where STATE_CONNECTING → STATE_CLOSED (server unreachable)
-		disconnected_from_server.emit()
+		if _is_game_active and _saved_room_id == "" and _room_id != "":
+			# Mid-game drop: save the room id and start reconnect loop
+			_saved_room_id   = _room_id
+			_is_reconnecting = true
+			_reconnect_elapsed = 0.0
+			_room_id = ""
+			set_process(true)  # keep running for reconnect loop
+		elif _is_reconnecting:
+			# A reconnect attempt failed — keep the loop going (don't emit disconnect)
+			pass
+		else:
+			set_process(false)
+			disconnected_from_server.emit()
 		if not was_connected:
 			push_warning("NetworkManager: socket closed before connecting (server unreachable?)")
 
@@ -239,7 +281,15 @@ func _handle_sio(msg: String) -> void:
 		"0":  # SIO CONNECT (namespace confirmed)
 			_connected = true
 			_emit_sio("register_online", {"player_name": GameData.player_name})
-			connected_to_server.emit()
+			if _is_reconnecting and _saved_room_id != "":
+				# We're mid-game reconnecting — ask server to let us back in
+				_emit_sio("rejoin_room", {
+					"room_id": _saved_room_id,
+					"player_name": GameData.player_name,
+					"is_host": GameData.is_host,
+				})
+			else:
+				connected_to_server.emit()
 		"1":  # SIO DISCONNECT
 			_connected = false
 			disconnected_from_server.emit()
@@ -270,6 +320,7 @@ func _dispatch(payload: String) -> void:
 		"partner_ready":
 			partner_ready.emit()
 		"game_start":
+			_is_game_active = true
 			game_start.emit()
 		"remote_player_state":
 			remote_player_state.emit(data)
@@ -279,6 +330,25 @@ func _dispatch(payload: String) -> void:
 			partner_died.emit()
 		"partner_disconnected":
 			partner_disconnected.emit()
+		"rejoin_confirmed":
+			# Our own socket was restored to the room
+			_room_id         = _saved_room_id
+			_saved_room_id   = ""
+			_is_reconnecting = false
+			# Restore GameData role (server echoes is_host)
+			GameData.is_host = bool(data.get("is_host", GameData.is_host))
+			# Let set_process stay true (we're online now)
+		"rejoin_error":
+			# Server rejected rejoin (room expired) — treat as hard disconnect
+			_is_reconnecting = false
+			_saved_room_id   = ""
+			_is_game_active  = false
+			set_process(false)
+			disconnected_from_server.emit()
+		"partner_reconnected":
+			partner_reconnected.emit()
+		"partner_reconnect_failed":
+			partner_reconnect_failed.emit()
 		# Enemy sync
 		"remote_enemy_spawned":
 			remote_enemy_spawned.emit(data)

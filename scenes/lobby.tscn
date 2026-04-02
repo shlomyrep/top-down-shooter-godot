@@ -2,22 +2,38 @@
 
 [ext_resource type="Script" path="res://scripts/lobby.gd" id="1_lobby"]
 [ext_resource type="Texture2D" path="res://assets/ui/fist_icon.png" id="2_icon"]
-[ext_resource type="Texture2D" path="res://assets/ui/search_icon.png" id="3_search"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_header"]
 bg_color = Color(0.05, 0.06, 0.14, 0.97)
 border_width_bottom = 2
 border_color = Color(0.2, 0.3, 0.55, 0.7)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_friends"]
-bg_color = Color(0.05, 0.06, 0.13, 0.85)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_left = 8
-corner_radius_bottom_right = 8
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card"]
+bg_color = Color(0.06, 0.07, 0.16, 0.92)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_left = 14
+corner_radius_bottom_right = 14
+border_width_bottom = 1
+border_width_top = 1
+border_width_left = 1
+border_width_right = 1
+border_color = Color(0.22, 0.28, 0.55, 0.5)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_slot_default"]
-bg_color = Color(0.08, 0.1, 0.18, 0.9)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_slot_me"]
+bg_color = Color(0.06, 0.14, 0.1, 0.9)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_left = 10
+corner_radius_bottom_right = 10
+border_width_bottom = 2
+border_width_top = 2
+border_width_left = 2
+border_width_right = 2
+border_color = Color(0.2, 0.85, 0.3, 0.7)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_slot_partner"]
+bg_color = Color(0.1, 0.1, 0.18, 0.9)
 corner_radius_top_left = 10
 corner_radius_top_right = 10
 corner_radius_bottom_left = 10
@@ -26,7 +42,7 @@ border_width_bottom = 1
 border_width_top = 1
 border_width_left = 1
 border_width_right = 1
-border_color = Color(0.28, 0.35, 0.6, 0.55)
+border_color = Color(0.3, 0.35, 0.55, 0.6)
 
 [node name="Lobby" type="Control"]
 anchors_preset = 15
@@ -57,217 +73,271 @@ theme_override_constants/margin_bottom = 0
 
 [node name="LobbyTitle" type="Label" parent="Header/HeaderMargin/HeaderHBox"]
 size_flags_horizontal = 3
-text = "LOBBY_TITLE"
-auto_translate_mode = 1
+text = "MULTIPLAYER"
 vertical_alignment = 1
 theme_override_font_sizes/font_size = 24
 theme_override_colors/font_color = Color(0.88, 0.9, 1.0, 1.0)
 
 [node name="ConnectionLabel" type="Label" parent="Header/HeaderMargin/HeaderHBox"]
-text = "LOBBY_OFFLINE"
-auto_translate_mode = 1
+text = "\u25cf OFFLINE"
 horizontal_alignment = 2
 vertical_alignment = 1
 theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(0.58, 0.6, 0.72, 1.0)
 
-[node name="MainVBox" type="VBoxContainer" parent="."]
+[node name="Content" type="CenterContainer" parent="."]
 layout_mode = 1
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 20
-offset_top = 64
-offset_right = -20
-offset_bottom = -12
-theme_override_constants/separation = 14
+offset_top = 56
 
-[node name="SlotRow" type="HBoxContainer" parent="MainVBox"]
-size_flags_vertical = 3
+[node name="MatchmakePanel" type="PanelContainer" parent="Content"]
+custom_minimum_size = Vector2(360, 0)
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="MM_Margin" type="MarginContainer" parent="Content/MatchmakePanel"]
+theme_override_constants/margin_left = 44
+theme_override_constants/margin_right = 44
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_bottom = 40
+
+[node name="MM_VBox" type="VBoxContainer" parent="Content/MatchmakePanel/MM_Margin"]
 theme_override_constants/separation = 16
 
-[node name="MySlot" type="PanelContainer" parent="MainVBox/SlotRow"]
-size_flags_horizontal = 3
-theme_override_styles/panel = SubResource("StyleBoxFlat_slot_default")
+[node name="MM_Title" type="Label" parent="Content/MatchmakePanel/MM_Margin/MM_VBox"]
+text = "Find a Partner"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(0.9, 0.92, 1.0, 1.0)
 
-[node name="SlotMargin" type="MarginContainer" parent="MainVBox/SlotRow/MySlot"]
+[node name="MM_Subtitle" type="Label" parent="Content/MatchmakePanel/MM_Margin/MM_VBox"]
+text = "Play co-op with a friend"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.55, 0.58, 0.75, 0.9)
+
+[node name="MM_Spacer" type="Control" parent="Content/MatchmakePanel/MM_Margin/MM_VBox"]
+custom_minimum_size = Vector2(0, 8)
+
+[node name="CreateRoomBtn" type="Button" parent="Content/MatchmakePanel/MM_Margin/MM_VBox"]
+text = "Create Room"
+theme_override_font_sizes/font_size = 18
+custom_minimum_size = Vector2(272, 52)
+
+[node name="JoinRoomBtn" type="Button" parent="Content/MatchmakePanel/MM_Margin/MM_VBox"]
+text = "Join Room"
+theme_override_font_sizes/font_size = 18
+custom_minimum_size = Vector2(272, 52)
+
+[node name="MM_BackBtn" type="Button" parent="Content/MatchmakePanel/MM_Margin/MM_VBox"]
+text = "\u2190 Back to Menu"
+theme_override_font_sizes/font_size = 14
+
+[node name="CreatePanel" type="PanelContainer" parent="Content"]
+visible = false
+custom_minimum_size = Vector2(360, 0)
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="CR_Margin" type="MarginContainer" parent="Content/CreatePanel"]
+theme_override_constants/margin_left = 44
+theme_override_constants/margin_right = 44
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_bottom = 40
+
+[node name="CR_VBox" type="VBoxContainer" parent="Content/CreatePanel/CR_Margin"]
+theme_override_constants/separation = 16
+
+[node name="CR_Title" type="Label" parent="Content/CreatePanel/CR_Margin/CR_VBox"]
+text = "Waiting for partner..."
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.88, 0.9, 1.0, 1.0)
+
+[node name="CR_Hint" type="Label" parent="Content/CreatePanel/CR_Margin/CR_VBox"]
+text = "Share this code with your friend:"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.55, 0.58, 0.75, 0.9)
+
+[node name="CodeLabel" type="Label" parent="Content/CreatePanel/CR_Margin/CR_VBox"]
+text = "-----"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 56
+theme_override_colors/font_color = Color(1.0, 0.9, 0.2, 1.0)
+
+[node name="LoadingLabel" type="Label" parent="Content/CreatePanel/CR_Margin/CR_VBox"]
+text = ""
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.5, 0.55, 0.75, 0.8)
+
+[node name="CancelBtn" type="Button" parent="Content/CreatePanel/CR_Margin/CR_VBox"]
+text = "\u2715  Cancel"
+theme_override_font_sizes/font_size = 14
+
+[node name="JoinPanel" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 0
+anchor_left = 0.0
+anchor_right = 1.0
+anchor_top = 0.0
+anchor_bottom = 0.0
+offset_left = 12.0
+offset_top = 66.0
+offset_right = -12.0
+offset_bottom = 386.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="JP_Margin" type="MarginContainer" parent="JoinPanel"]
 theme_override_constants/margin_left = 24
 theme_override_constants/margin_right = 24
+theme_override_constants/margin_top = 28
+theme_override_constants/margin_bottom = 28
+
+[node name="JP_VBox" type="VBoxContainer" parent="JoinPanel/JP_Margin"]
+theme_override_constants/separation = 16
+
+[node name="JP_Title" type="Label" parent="JoinPanel/JP_Margin/JP_VBox"]
+text = "Enter Room Code"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(0.88, 0.9, 1.0, 1.0)
+
+[node name="CodeInput" type="LineEdit" parent="JoinPanel/JP_Margin/JP_VBox"]
+placeholder_text = "e.g. ABCDE"
+max_length = 5
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 30
+custom_minimum_size = Vector2(272, 52)
+
+[node name="JoinConfirmBtn" type="Button" parent="JoinPanel/JP_Margin/JP_VBox"]
+text = "JOIN"
+theme_override_font_sizes/font_size = 20
+custom_minimum_size = Vector2(272, 52)
+
+[node name="JP_Status" type="Label" parent="JoinPanel/JP_Margin/JP_VBox"]
+text = ""
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(1.0, 0.4, 0.3, 1.0)
+
+[node name="JP_BackBtn" type="Button" parent="JoinPanel/JP_Margin/JP_VBox"]
+text = "\u2190 Back"
+theme_override_font_sizes/font_size = 14
+
+[node name="PreGamePanel" type="PanelContainer" parent="Content"]
+visible = false
+custom_minimum_size = Vector2(620, 0)
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="PG_Margin" type="MarginContainer" parent="Content/PreGamePanel"]
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_bottom = 32
+
+[node name="PG_VBox" type="VBoxContainer" parent="Content/PreGamePanel/PG_Margin"]
+theme_override_constants/separation = 20
+
+[node name="PG_Title" type="Label" parent="Content/PreGamePanel/PG_Margin/PG_VBox"]
+text = "Partner Found!"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(0.3, 0.95, 0.45, 1.0)
+
+[node name="SlotRow" type="HBoxContainer" parent="Content/PreGamePanel/PG_Margin/PG_VBox"]
+theme_override_constants/separation = 20
+
+[node name="MySlot" type="PanelContainer" parent="Content/PreGamePanel/PG_Margin/PG_VBox/SlotRow"]
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_slot_me")
+
+[node name="MyMargin" type="MarginContainer" parent="Content/PreGamePanel/PG_Margin/PG_VBox/SlotRow/MySlot"]
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_right = 20
 theme_override_constants/margin_top = 20
 theme_override_constants/margin_bottom = 20
 
-[node name="SlotVBox" type="VBoxContainer" parent="MainVBox/SlotRow/MySlot/SlotMargin"]
+[node name="MyVBox" type="VBoxContainer" parent="Content/PreGamePanel/PG_Margin/PG_VBox/SlotRow/MySlot/MyMargin"]
 alignment = 1
 theme_override_constants/separation = 8
 
-[node name="AvatarIcon" type="TextureRect" parent="MainVBox/SlotRow/MySlot/SlotMargin/SlotVBox"]
+[node name="MyAvatar" type="TextureRect" parent="Content/PreGamePanel/PG_Margin/PG_VBox/SlotRow/MySlot/MyMargin/MyVBox"]
 custom_minimum_size = Vector2(64, 64)
 size_flags_horizontal = 4
 stretch_mode = 5
 texture = ExtResource("2_icon")
 
-[node name="NameLabel" type="Label" parent="MainVBox/SlotRow/MySlot/SlotMargin/SlotVBox"]
+[node name="MyNameLabel" type="Label" parent="Content/PreGamePanel/PG_Margin/PG_VBox/SlotRow/MySlot/MyMargin/MyVBox"]
 text = "SURVIVOR"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 18
 theme_override_colors/font_color = Color(0.9, 0.92, 1.0, 1.0)
 
-[node name="StatusLabel" type="Label" parent="MainVBox/SlotRow/MySlot/SlotMargin/SlotVBox"]
-text = "LOBBY_YOU"
-auto_translate_mode = 1
+[node name="MyStatusLabel" type="Label" parent="Content/PreGamePanel/PG_Margin/PG_VBox/SlotRow/MySlot/MyMargin/MyVBox"]
+text = "YOU"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 13
 theme_override_colors/font_color = Color(0.28, 0.88, 0.38, 1.0)
 
-[node name="PartnerSlot" type="PanelContainer" parent="MainVBox/SlotRow"]
+[node name="PartnerSlot" type="PanelContainer" parent="Content/PreGamePanel/PG_Margin/PG_VBox/SlotRow"]
 size_flags_horizontal = 3
-theme_override_styles/panel = SubResource("StyleBoxFlat_slot_default")
+theme_override_styles/panel = SubResource("StyleBoxFlat_slot_partner")
 
-[node name="SlotMargin" type="MarginContainer" parent="MainVBox/SlotRow/PartnerSlot"]
-theme_override_constants/margin_left = 24
-theme_override_constants/margin_right = 24
+[node name="PartnerMargin" type="MarginContainer" parent="Content/PreGamePanel/PG_Margin/PG_VBox/SlotRow/PartnerSlot"]
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_right = 20
 theme_override_constants/margin_top = 20
 theme_override_constants/margin_bottom = 20
 
-[node name="SlotVBox" type="VBoxContainer" parent="MainVBox/SlotRow/PartnerSlot/SlotMargin"]
+[node name="PartnerVBox" type="VBoxContainer" parent="Content/PreGamePanel/PG_Margin/PG_VBox/SlotRow/PartnerSlot/PartnerMargin"]
 alignment = 1
 theme_override_constants/separation = 8
 
-[node name="AvatarLabel" type="Label" parent="MainVBox/SlotRow/PartnerSlot/SlotMargin/SlotVBox"]
+[node name="PartnerAvatarLabel" type="Label" parent="Content/PreGamePanel/PG_Margin/PG_VBox/SlotRow/PartnerSlot/PartnerMargin/PartnerVBox"]
 text = "?"
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 52
-theme_override_colors/font_color = Color(0.45, 0.48, 0.72, 0.75)
 
-[node name="NameLabel" type="Label" parent="MainVBox/SlotRow/PartnerSlot/SlotMargin/SlotVBox"]
-text = "LOBBY_WAITING"
-auto_translate_mode = 1
+[node name="PartnerNameLabel" type="Label" parent="Content/PreGamePanel/PG_Margin/PG_VBox/SlotRow/PartnerSlot/PartnerMargin/PartnerVBox"]
+text = "..."
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.9, 0.92, 1.0, 1.0)
+
+[node name="PartnerStatusLabel" type="Label" parent="Content/PreGamePanel/PG_Margin/PG_VBox/SlotRow/PartnerSlot/PartnerMargin/PartnerVBox"]
+text = "CONNECTED"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 13
 theme_override_colors/font_color = Color(0.5, 0.52, 0.72, 0.8)
 
-[node name="StatusLabel" type="Label" parent="MainVBox/SlotRow/PartnerSlot/SlotMargin/SlotVBox"]
-text = "LOBBY_EMPTY_SLOT"
-auto_translate_mode = 1
+[node name="PG_HintLabel" type="Label" parent="Content/PreGamePanel/PG_Margin/PG_VBox"]
+text = "Both players press Ready to start"
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 14
-theme_override_colors/font_color = Color(0.42, 0.45, 0.62, 0.8)
+theme_override_colors/font_color = Color(0.55, 0.58, 0.75, 0.85)
 
-[node name="FindBtn" type="Button" parent="MainVBox/SlotRow/PartnerSlot/SlotMargin/SlotVBox"]
-text = "LOBBY_FIND_BTN"
-auto_translate_mode = 1
-icon = ExtResource("3_search")
-theme_override_font_sizes/font_size = 15
-
-[node name="FriendsSection" type="PanelContainer" parent="MainVBox"]
-theme_override_styles/panel = SubResource("StyleBoxFlat_friends")
-
-[node name="FriendsMargin" type="MarginContainer" parent="MainVBox/FriendsSection"]
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_bottom = 12
-
-[node name="FriendsVBox" type="VBoxContainer" parent="MainVBox/FriendsSection/FriendsMargin"]
-theme_override_constants/separation = 8
-
-[node name="FriendsTitle" type="Label" parent="MainVBox/FriendsSection/FriendsMargin/FriendsVBox"]
-text = "FRIENDS"
-theme_override_font_sizes/font_size = 13
-theme_override_colors/font_color = Color(0.48, 0.55, 0.75, 1.0)
-
-[node name="Friend1" type="HBoxContainer" parent="MainVBox/FriendsSection/FriendsMargin/FriendsVBox"]
-theme_override_constants/separation = 10
-
-[node name="Dot1" type="Label" parent="MainVBox/FriendsSection/FriendsMargin/FriendsVBox/Friend1"]
-text = "●"
-vertical_alignment = 1
-theme_override_font_sizes/font_size = 10
-theme_override_colors/font_color = Color(0.38, 0.4, 0.55, 1.0)
-
-[node name="Name1" type="Label" parent="MainVBox/FriendsSection/FriendsMargin/FriendsVBox/Friend1"]
-size_flags_horizontal = 3
-text = "Ghost_77"
-vertical_alignment = 1
-theme_override_font_sizes/font_size = 14
-theme_override_colors/font_color = Color(0.55, 0.6, 0.75, 0.85)
-
-[node name="Status1" type="Label" parent="MainVBox/FriendsSection/FriendsMargin/FriendsVBox/Friend1"]
-text = "OFFLINE"
-horizontal_alignment = 2
-vertical_alignment = 1
-theme_override_font_sizes/font_size = 12
-theme_override_colors/font_color = Color(0.38, 0.4, 0.55, 0.75)
-
-[node name="Friend2" type="HBoxContainer" parent="MainVBox/FriendsSection/FriendsMargin/FriendsVBox"]
-theme_override_constants/separation = 10
-
-[node name="Dot2" type="Label" parent="MainVBox/FriendsSection/FriendsMargin/FriendsVBox/Friend2"]
-text = "●"
-vertical_alignment = 1
-theme_override_font_sizes/font_size = 10
-theme_override_colors/font_color = Color(0.38, 0.4, 0.55, 1.0)
-
-[node name="Name2" type="Label" parent="MainVBox/FriendsSection/FriendsMargin/FriendsVBox/Friend2"]
-size_flags_horizontal = 3
-text = "IronFist"
-vertical_alignment = 1
-theme_override_font_sizes/font_size = 14
-theme_override_colors/font_color = Color(0.55, 0.6, 0.75, 0.85)
-
-[node name="Status2" type="Label" parent="MainVBox/FriendsSection/FriendsMargin/FriendsVBox/Friend2"]
-text = "OFFLINE"
-horizontal_alignment = 2
-vertical_alignment = 1
-theme_override_font_sizes/font_size = 12
-theme_override_colors/font_color = Color(0.38, 0.4, 0.55, 0.75)
-
-[node name="Friend3" type="HBoxContainer" parent="MainVBox/FriendsSection/FriendsMargin/FriendsVBox"]
-theme_override_constants/separation = 10
-
-[node name="Dot3" type="Label" parent="MainVBox/FriendsSection/FriendsMargin/FriendsVBox/Friend3"]
-text = "●"
-vertical_alignment = 1
-theme_override_font_sizes/font_size = 10
-theme_override_colors/font_color = Color(0.22, 0.88, 0.38, 1.0)
-
-[node name="Name3" type="Label" parent="MainVBox/FriendsSection/FriendsMargin/FriendsVBox/Friend3"]
-size_flags_horizontal = 3
-text = "NightOwl"
-vertical_alignment = 1
-theme_override_font_sizes/font_size = 14
-theme_override_colors/font_color = Color(0.72, 0.78, 0.92, 1.0)
-
-[node name="Status3" type="Label" parent="MainVBox/FriendsSection/FriendsMargin/FriendsVBox/Friend3"]
-text = "ONLINE"
-horizontal_alignment = 2
-vertical_alignment = 1
-theme_override_font_sizes/font_size = 12
-theme_override_colors/font_color = Color(0.22, 0.88, 0.38, 1.0)
-
-[node name="BottomButtons" type="HBoxContainer" parent="MainVBox"]
+[node name="PG_Buttons" type="HBoxContainer" parent="Content/PreGamePanel/PG_Margin/PG_VBox"]
 theme_override_constants/separation = 12
 
-[node name="BackBtn" type="Button" parent="MainVBox/BottomButtons"]
-text = "LOBBY_BACK_BTN"
-auto_translate_mode = 1
+[node name="PG_BackBtn" type="Button" parent="Content/PreGamePanel/PG_Margin/PG_VBox/PG_Buttons"]
+text = "\u2190 Leave"
+theme_override_font_sizes/font_size = 14
 
-[node name="BottomSpacer" type="Control" parent="MainVBox/BottomButtons"]
+[node name="PG_Spacer" type="Control" parent="Content/PreGamePanel/PG_Margin/PG_VBox/PG_Buttons"]
 size_flags_horizontal = 3
 
-[node name="ReadyBtn" type="Button" parent="MainVBox/BottomButtons"]
-text = "LOBBY_READY_BTN"
-auto_translate_mode = 1
+[node name="ReadyBtn" type="Button" parent="Content/PreGamePanel/PG_Margin/PG_VBox/PG_Buttons"]
+text = "\u2713  READY"
+theme_override_font_sizes/font_size = 20
+custom_minimum_size = Vector2(160, 48)
 
-[node name="StartBtn" type="Button" parent="MainVBox/BottomButtons"]
-text = "LOBBY_START_BTN"
-auto_translate_mode = 1
-disabled = true
-
-[node name="SearchTimer" type="Timer" parent="."]
-one_shot = true
-
-[connection signal="pressed" from="MainVBox/SlotRow/PartnerSlot/SlotMargin/SlotVBox/FindBtn" to="." method="_on_find_btn_pressed"]
-[connection signal="pressed" from="MainVBox/BottomButtons/ReadyBtn" to="." method="_on_ready_btn_pressed"]
-[connection signal="pressed" from="MainVBox/BottomButtons/StartBtn" to="." method="_on_start_btn_pressed"]
-[connection signal="pressed" from="MainVBox/BottomButtons/BackBtn" to="." method="_on_back_btn_pressed"]
-[connection signal="timeout" from="SearchTimer" to="." method="_on_search_timer_timeout"]
+[connection signal="pressed" from="Content/MatchmakePanel/MM_Margin/MM_VBox/CreateRoomBtn" to="." method="_on_create_pressed"]
+[connection signal="pressed" from="Content/MatchmakePanel/MM_Margin/MM_VBox/JoinRoomBtn" to="." method="_on_join_pressed"]
+[connection signal="pressed" from="Content/MatchmakePanel/MM_Margin/MM_VBox/MM_BackBtn" to="." method="_on_back_pressed"]
+[connection signal="pressed" from="Content/CreatePanel/CR_Margin/CR_VBox/CancelBtn" to="." method="_on_cancel_pressed"]
+[connection signal="pressed" from="JoinPanel/JP_Margin/JP_VBox/JoinConfirmBtn" to="." method="_on_join_confirm_pressed"]
+[connection signal="text_submitted" from="JoinPanel/JP_Margin/JP_VBox/CodeInput" to="." method="_on_code_submitted"]
+[connection signal="pressed" from="JoinPanel/JP_Margin/JP_VBox/JP_BackBtn" to="." method="_on_join_back_pressed"]
+[connection signal="pressed" from="Content/PreGamePanel/PG_Margin/PG_VBox/PG_Buttons/ReadyBtn" to="." method="_on_ready_pressed"]
+[connection signal="pressed" from="Content/PreGamePanel/PG_Margin/PG_VBox/PG_Buttons/PG_BackBtn" to="." method="_on_pregame_back_pressed"]

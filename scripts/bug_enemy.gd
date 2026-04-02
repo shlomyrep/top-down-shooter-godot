@@ -42,17 +42,24 @@ func _setup_animations() -> void:
 	body_sprite.sprite_frames = frames
 	body_sprite.play("move")
 
-## Returns the nearest node in the "target_players" group (local + remote player).
+## Returns the nearest non-downed node in the "target_players" group.
+## Downed players are skipped so enemies chase the living partner instead.
 func _nearest_target() -> Node2D:
-	var best: Node2D = player
-	var best_dist: float = INF if not player else global_position.distance_to(player.global_position)
+	var best: Node2D = null
+	var best_dist: float = INF
 	for t in get_tree().get_nodes_in_group("target_players"):
 		if not is_instance_valid(t):
+			continue
+		# Skip downed players
+		if t.get("is_downed") == true:
 			continue
 		var d := global_position.distance_to(t.global_position)
 		if d < best_dist:
 			best_dist = d
 			best = t
+	# Fall back to any target if all are downed
+	if best == null:
+		best = player
 	return best
 
 func _physics_process(delta: float) -> void:
@@ -142,6 +149,7 @@ func take_damage(amount: int) -> void:
 	health -= amount
 	health_bar.value = health
 	health_bar.visible = true
+	SoundManager.play_sfx_2d("enemy_hit", global_position)
 	body_sprite.modulate = Color(10, 10, 10, 1)
 	var tween: Tween = create_tween()
 	tween.tween_property(body_sprite, "modulate", Color.WHITE, 0.12)

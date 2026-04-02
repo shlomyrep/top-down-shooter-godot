@@ -10,6 +10,7 @@ extends Control
 func _ready() -> void:
 	_apply_styles()
 	_refresh_labels()
+	SoundManager.play_music("menu_bg")
 	# Animate panel fade-in
 	var panel: Control = $CenterContainer/MainPanel
 	panel.modulate.a = 0.0

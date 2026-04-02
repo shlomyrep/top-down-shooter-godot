@@ -2,7 +2,7 @@ extends Control
 
 @onready var fade: ColorRect = $FadeOverlay
 @onready var content_vbox: VBoxContainer = $CenterContainer/VBox
-@onready var fist_label: Label = $CenterContainer/VBox/FistLabel
+@onready var fist_label: Label = $CenterContainer/VBox/TitleLabel
 
 var _transitioning := false
 

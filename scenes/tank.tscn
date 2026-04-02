@@ -51,7 +51,7 @@ height = 512
 
 [node name="Tank" type="CharacterBody2D"]
 collision_layer = 2
-collision_mask = 45
+collision_mask = 237
 script = ExtResource("1_tank")
 
 [node name="Shadow" type="Sprite2D" parent="."]
@@ -73,7 +73,7 @@ offset = Vector2(-28, 0)
 
 [node name="AmbientLight" type="PointLight2D" parent="."]
 texture = SubResource("GradTex_tank_light")
-texture_scale = 4.0
+texture_scale = 0.4
 color = Color(0.224, 1.0, 0.078, 1.0)
 energy = 0.75
 blend_mode = 0

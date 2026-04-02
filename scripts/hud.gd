@@ -414,14 +414,20 @@ func _highlight_size_btn(active: Button) -> void:
 	active.modulate = Color(1.0, 1.0, 1.0, 1.0)
 
 func _on_small_btn_pressed() -> void:
+	build_item_selected.emit("template")
+	_highlight_palette(template_btn)
 	template_size_selected.emit("small")
 	_highlight_size_btn(small_btn)
 
 func _on_medium_btn_pressed() -> void:
+	build_item_selected.emit("template")
+	_highlight_palette(template_btn)
 	template_size_selected.emit("medium")
 	_highlight_size_btn(medium_btn)
 
 func _on_large_btn_pressed() -> void:
+	build_item_selected.emit("template")
+	_highlight_palette(template_btn)
 	template_size_selected.emit("large")
 	_highlight_size_btn(large_btn)
 

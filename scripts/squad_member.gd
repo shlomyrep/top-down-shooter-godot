@@ -14,6 +14,9 @@ var _shoot_timer: Timer
 var _lifetime_timer: Timer
 # Each member orbits the player at a unique offset — creates a loose formation
 var _follow_offset: Vector2 = Vector2.ZERO
+# Stuck detection
+var _last_pos: Vector2 = Vector2.ZERO
+var _stuck_time: float = 0.0
 
 signal expired
 
@@ -55,19 +58,70 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	if not player or not is_instance_valid(player):
 		return
+
+	# Instantly eject from any overlapping wall/structure
+	_eject_from_walls()
+
 	var follow_pos := player.global_position + _follow_offset
 	var dist := global_position.distance_to(follow_pos)
 	if dist > 55.0:
-		velocity = (follow_pos - global_position).normalized() * speed
+		var dir := (follow_pos - global_position).normalized()
+		# Stuck detection: if barely moving while we should be, steer sideways
+		if global_position.distance_to(_last_pos) < 3.0:
+			_stuck_time += delta
+		else:
+			_stuck_time = 0.0
+		if _stuck_time > 0.25:
+			# Oscillate steer direction so it self-corrects around corners
+			var steer := PI * 0.45 * sign(sin(_stuck_time * 4.0))
+			dir = dir.rotated(steer)
+		velocity = dir * speed
 	else:
 		velocity = Vector2.ZERO
-	DepenetrationHelper.resolve(self, delta)
+		_stuck_time = 0.0
+
+	_last_pos = global_position
 	move_and_slide()
 
 	if _target and is_instance_valid(_target):
 		body_poly.rotation = global_position.angle_to_point(_target.global_position)
 	elif velocity.length() > 10:
 		body_poly.rotation = velocity.angle()
+
+## Directly corrects position when overlapping a wall/structure.
+## Handles the case where a wall is built on top of the squad member.
+func _eject_from_walls() -> void:
+	var space := get_world_2d().direct_space_state
+	if not space:
+		return
+	var owners := get_shape_owners()
+	if owners.is_empty():
+		return
+	var oid: int = owners[0]
+	if shape_owner_get_shape_count(oid) == 0:
+		return
+	var shape := shape_owner_get_shape(oid, 0)
+	var params := PhysicsShapeQueryParameters2D.new()
+	params.shape = shape
+	params.transform = global_transform * shape_owner_get_transform(oid)
+	params.collision_mask = 32  # walls and structures only (not doors)
+	params.exclude = [get_rid()]
+	params.collide_with_bodies = true
+	params.collide_with_areas = false
+	var hits := space.intersect_shape(params, 4)
+	if hits.is_empty():
+		return
+	var push := Vector2.ZERO
+	for hit: Dictionary in hits:
+		var col := hit.get("collider") as Node2D
+		if not col:
+			continue
+		var diff := global_position - col.global_position
+		if diff.is_zero_approx():
+			diff = Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)).normalized()
+		push += diff.normalized()
+	if not push.is_zero_approx():
+		global_position += push.normalized() * 38.0
 
 func _on_body_entered(body: Node) -> void:
 	if body.is_in_group("enemies") and not _target:

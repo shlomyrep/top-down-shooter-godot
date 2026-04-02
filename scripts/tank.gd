@@ -269,6 +269,7 @@ func take_damage(amount: int) -> void:
 	health -= amount
 	health_bar.value   = health
 	health_bar.visible = true
+	SoundManager.play_sfx_2d("enemy_hit", global_position)
 	body_sprite.modulate   = Color(10, 10, 10, 1)
 	barrel_sprite.modulate = Color(10, 10, 10, 1)
 	create_tween().tween_property(body_sprite,   "modulate", Color.WHITE, 0.15)

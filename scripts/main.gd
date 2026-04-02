@@ -81,6 +81,8 @@ var _downed_overlay: Control  = null   # shown on the downed player's screen
 var _revive_bar_container: Control = null  # shown on the alive player's screen
 
 func _ready() -> void:
+	# Fade out any menu music — in-game music starts when the first wave/build phase begins.
+	SoundManager.play_music("")
 	_between_wave_timer = Timer.new()
 	_between_wave_timer.one_shot = true
 	_between_wave_timer.timeout.connect(_on_between_wave_timeout)
@@ -701,6 +703,9 @@ func _spawn_coin(pos: Vector2, coin_net_id: String = "") -> void:
 	add_child(coin)
 
 func _on_coin_collected(amount: int, net_id: String = "") -> void:
+	# Guard: if the partner already collected this coin (race condition), skip.
+	if GameData.is_multiplayer and net_id != "" and not _coin_registry.has(net_id):
+		return
 	coins += amount
 	hud.update_coins(coins)
 	_coin_registry.erase(net_id)
@@ -1023,6 +1028,8 @@ func _init_multiplayer() -> void:
 	NetworkManager.remote_bullet_fired.connect(_on_remote_bullet_fired)
 	NetworkManager.partner_died.connect(_on_partner_died)
 	NetworkManager.partner_disconnected.connect(_on_partner_disconnected)
+	NetworkManager.partner_reconnected.connect(_on_partner_reconnected)
+	NetworkManager.partner_reconnect_failed.connect(_on_partner_reconnect_failed)
 
 	# Enemy sync
 	if GameData.is_host:
@@ -1080,9 +1087,39 @@ func _on_partner_died() -> void:
 	await get_tree().create_timer(2.5).timeout
 	_on_player_died()
 
+# ── Reconnect grace period ─────────────────────────────────────────────────────
+var _reconnect_waiting: bool  = false
+var _reconnect_countdown: int = 0
+var _reconnect_label_timer: SceneTreeTimer = null
+
 func _on_partner_disconnected() -> void:
-	_show_partner_event(tr("PARTNER_DISCONNECTED_BANNER"))
-	await get_tree().create_timer(2.5).timeout
+	_reconnect_waiting   = true
+	_reconnect_countdown = 60
+	_show_partner_event("Partner disconnected\nReconnecting... (60s)")
+	_run_reconnect_countdown()
+
+func _run_reconnect_countdown() -> void:
+	while _reconnect_waiting and _reconnect_countdown > 0:
+		await get_tree().create_timer(1.0).timeout
+		_reconnect_countdown -= 1
+		if _reconnect_waiting:
+			_show_partner_event("Partner disconnected\nReconnecting... (%ds)" % _reconnect_countdown)
+	if _reconnect_waiting:
+		# Time ran out on our side too (partner_reconnect_failed arrives separately from server)
+		_reconnect_waiting = false
+		_on_player_died()
+
+func _on_partner_reconnected() -> void:
+	_reconnect_waiting = false
+	_show_partner_event("Partner reconnected!")
+	await get_tree().create_timer(2.0).timeout
+	if _partner_down_label:
+		_partner_down_label.visible = false
+
+func _on_partner_reconnect_failed() -> void:
+	if not _reconnect_waiting:
+		return  # already handled by countdown
+	_reconnect_waiting = false
 	_on_player_died()
 
 func _show_partner_event(msg: String) -> void:

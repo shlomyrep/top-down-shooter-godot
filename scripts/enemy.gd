@@ -9,6 +9,7 @@ var health: int
 var player: Node2D = null
 var _is_dead := false
 var _knockback_velocity := Vector2.ZERO
+var _bodies_in_hit_area: Array[Node2D] = []
 
 ## AI state machine
 enum State { CHASE, ATTACK_STRUCTURE }
@@ -35,6 +36,8 @@ func _ready() -> void:
 	attack_cooldown.wait_time = attack_cooldown_time
 	_setup_animations()
 	body_sprite.animation_finished.connect(func(): body_sprite.play("idle"))
+	$HitArea.body_exited.connect(_on_hit_area_body_exited)
+	attack_cooldown.timeout.connect(_on_attack_cooldown_timeout)
 
 func _setup_animations() -> void:
 	var frames := SpriteFrames.new()
@@ -64,18 +67,24 @@ func set_aggro(attacker: Node2D) -> void:
 	if attacker and is_instance_valid(attacker) and attacker.is_in_group("squad"):
 		_aggro_target = attacker
 
-## Returns the nearest node in the "target_players" group (local + remote player).
-## Falls back to the assigned player var if the group is empty.
+## Returns the nearest non-downed node in the "target_players" group.
+## Downed players are skipped so enemies chase the living partner instead.
 func _nearest_target() -> Node2D:
-	var best: Node2D = player
-	var best_dist: float = INF if not player else global_position.distance_to(player.global_position)
+	var best: Node2D = null
+	var best_dist: float = INF
 	for t in get_tree().get_nodes_in_group("target_players"):
 		if not is_instance_valid(t):
+			continue
+		# Skip downed players
+		if t.get("is_downed") == true:
 			continue
 		var d := global_position.distance_to(t.global_position)
 		if d < best_dist:
 			best_dist = d
 			best = t
+	# Fall back to any target if all are downed (shouldn't happen — game ends)
+	if best == null:
+		best = player
 	return best
 
 func _physics_process(delta: float) -> void:
@@ -145,6 +154,7 @@ func take_damage(amount: int) -> void:
 	health -= amount
 	health_bar.value = health
 	health_bar.visible = true
+	SoundManager.play_sfx_2d("enemy_hit", global_position)
 	_flash()
 	if health <= 0:
 		_is_dead = true
@@ -222,12 +232,35 @@ func _on_hit_area_body_entered(body: Node2D) -> void:
 	# Only melee-attack player(s) and squad members; walls are handled by the state machine
 	var is_player_body := body.is_in_group("target_players")
 	var is_squad_member := body.is_in_group("squad")
-	if (is_player_body or is_squad_member) and attack_cooldown.is_stopped():
-		body.take_damage(damage)
-		attack_cooldown.start()
-		body_sprite.play("attack")
-		SoundManager.play_sfx_2d("enemy_melee_swing", global_position)
-		# Knockback only applies when hitting a player
-		if is_player_body:
-			var push_dir: Vector2 = (global_position - body.global_position).normalized()
-			_knockback_velocity = push_dir * KNOCKBACK_FORCE
+	if not (is_player_body or is_squad_member):
+		return
+	if not _bodies_in_hit_area.has(body):
+		_bodies_in_hit_area.append(body)
+	if attack_cooldown.is_stopped():
+		_do_melee_attack(body)
+
+func _on_hit_area_body_exited(body: Node2D) -> void:
+	_bodies_in_hit_area.erase(body)
+
+func _on_attack_cooldown_timeout() -> void:
+	# Only re-attack players while chasing; structure-attack state drives its own cycle
+	if _state != State.CHASE:
+		return
+	# Remove any freed nodes, then re-attack the first body still in range
+	_bodies_in_hit_area = _bodies_in_hit_area.filter(func(b): return is_instance_valid(b))
+	if _bodies_in_hit_area.is_empty():
+		return
+	_do_melee_attack(_bodies_in_hit_area[0])
+
+func _do_melee_attack(body: Node2D) -> void:
+	if not is_instance_valid(body):
+		return
+	body.take_damage(damage)
+	attack_cooldown.start()
+	body_sprite.play("attack")
+	SoundManager.play_sfx_2d("enemy_melee_swing", global_position)
+	# Knockback only applies when hitting a player — pushes enemy back so it
+	# doesn't stay glued against the player
+	if body.is_in_group("target_players"):
+		var push_dir: Vector2 = (global_position - body.global_position).normalized()
+		_knockback_velocity = push_dir * KNOCKBACK_FORCE

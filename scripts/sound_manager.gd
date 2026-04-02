@@ -29,8 +29,10 @@ var _music_active := "a"   # "a" or "b" — which player owns the current track
 var _current_music := ""
 var _music_duck_tween: Tween = null
 
-const MUSIC_VOL_DB   := -10.0
+const MUSIC_VOL_DB   := -16.4
 const SFX_VOL_DB     := 0.0
+const SFX_2D_VOL_DB  := -9.3   # spatial impact/combat sounds
+const WEAPON_VOL_DB  := -13.7  # weapon shots
 const VOICE_VOL_DB   := 2.0
 const UI_VOL_DB      := -5.0
 const AMBIENT_VOL_DB := -22.0
@@ -89,10 +91,13 @@ func _ready() -> void:
 	else:
 		language = _locale_to_language(OS.get_locale_language())
 
-# Returns the best supported language for a given ISO 639-1 locale code.
+# Returns the best supported language for a given locale code.
+# Normalizes Android legacy codes: "iw"→"he", "in"→"id", "ji"→"yi".
 func _locale_to_language(locale_code: String) -> String:
-	if locale_code in SUPPORTED_LANGUAGES:
-		return locale_code
+	const ALIASES := {"iw": "he", "in": "id", "ji": "yi"}
+	var lang: String = ALIASES.get(locale_code, locale_code)
+	if lang in SUPPORTED_LANGUAGES:
+		return lang
 	return DEFAULT_LANGUAGE
 
 # ─── Bus Setup ───────────────────────────────────────────────────────────────
@@ -186,6 +191,7 @@ func _build_players() -> void:
 	for _i in WEAPON_POOL_SIZE:
 		var p := AudioStreamPlayer2D.new()
 		p.bus = "SFX"
+		p.volume_db    = WEAPON_VOL_DB
 		p.max_distance = 1600.0
 		p.attenuation  = 1.0
 		add_child(p)
@@ -194,13 +200,16 @@ func _build_players() -> void:
 	# LMG dedicated looping player
 	_lmg_player = AudioStreamPlayer2D.new()
 	_lmg_player.bus = "SFX"
+	_lmg_player.volume_db    = WEAPON_VOL_DB
 	_lmg_player.max_distance = 1600.0
+	_lmg_player.finished.connect(_on_lmg_finished)
 	add_child(_lmg_player)
 
 	# Spatial SFX pool
 	for _i in SFX_POOL_SIZE:
 		var p := AudioStreamPlayer2D.new()
 		p.bus = "SFX"
+		p.volume_db    = SFX_2D_VOL_DB
 		p.max_distance = 1600.0
 		p.attenuation  = 1.2
 		add_child(p)
@@ -213,11 +222,13 @@ func _build_players() -> void:
 ## Play background music by name (no extension). Pass "" to fade out.
 ## Crossfades over fade_sec seconds.
 func play_music(track_name: String, fade_sec: float = 1.5) -> void:
-	if track_name == _current_music:
+	# Allow restart of same track if the active player stopped (e.g. non-looping file ended)
+	var active_player: AudioStreamPlayer = _music_a if _music_active == "a" else _music_b
+	if track_name == _current_music and active_player.playing:
 		return
 	_current_music = track_name
 
-	var outgoing: AudioStreamPlayer = _music_a if _music_active == "a" else _music_b
+	var outgoing: AudioStreamPlayer = active_player
 	var incoming: AudioStreamPlayer = _music_b if _music_active == "a" else _music_a
 	_music_active = "b" if _music_active == "a" else "a"
 
@@ -231,6 +242,12 @@ func play_music(track_name: String, fade_sec: float = 1.5) -> void:
 	var stream := _load_music(track_name)
 	if not stream:
 		return
+
+	# Enable looping for all music tracks
+	if stream is AudioStreamMP3:
+		(stream as AudioStreamMP3).loop = true
+	elif stream is AudioStreamOggVorbis:
+		(stream as AudioStreamOggVorbis).loop = true
 
 	incoming.stream = stream
 	incoming.volume_db = -80.0
@@ -278,11 +295,17 @@ func start_lmg(world_pos: Vector2) -> void:
 	if not stream:
 		return
 	_lmg_active = true
+	# OGG supports a loop flag; QOA/MP3 loop via the finished signal (_on_lmg_finished).
 	if stream is AudioStreamOggVorbis:
 		(stream as AudioStreamOggVorbis).loop = true
 	_lmg_player.stream = stream
 	_lmg_player.play()
 	play_weapon("lmg_spinup", world_pos)
+
+## Restart LMG loop when the clip ends (handles QOA/MP3 which have no loop flag).
+func _on_lmg_finished() -> void:
+	if _lmg_active:
+		_lmg_player.play()
 
 ## Stop the LMG loop.
 func stop_lmg() -> void:
@@ -432,10 +455,22 @@ func _next_sfx() -> AudioStreamPlayer2D:
 	return p
 
 func _load_sfx(name: String) -> AudioStream:
-	return _load(_SFX_PATH + name + ".ogg")
+	# Godot supports .ogg, .mp3, .wav — try in that order.
+	# (.qoa is not a Godot-native format)
+	var s := _load(_SFX_PATH + name + ".ogg")
+	if s:
+		return s
+	s = _load(_SFX_PATH + name + ".mp3")
+	if s:
+		return s
+	return _load(_SFX_PATH + name + ".wav")
 
 func _load_music(name: String) -> AudioStream:
-	return _load(_MUSIC_PATH + name + ".ogg")
+	# Try .ogg first, then .mp3 so both formats are supported.
+	var s := _load(_MUSIC_PATH + name + ".ogg")
+	if s:
+		return s
+	return _load(_MUSIC_PATH + name + ".mp3")
 
 func _load_voice(name: String) -> AudioStream:
 	# Try active language first, then fall back to English

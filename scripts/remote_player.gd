@@ -182,8 +182,18 @@ func teleport_to(pos: Vector2) -> void:
 	_snapshot_buffer.clear()
 	_initialized = false
 
+## Tracks downed state so enemies skip this target when the partner is down.
+var is_downed := false
+
+## No-op: the remote player's HP is authoritative on the partner's device.
+## This stub exists so enemy explosion/attack code doesn't crash when it
+## calls take_damage() on every node in the "target_players" group.
+func take_damage(_amount: int) -> void:
+	pass
+
 ## Called by main.gd when the partner's downed state changes.
 func set_downed(downed_state: bool) -> void:
+	is_downed = downed_state
 	if downed_state:
 		_body.modulate = Color(1.0, 0.25, 0.25, 0.85)  # Red tint — partner is down
 		_body.play("idle")

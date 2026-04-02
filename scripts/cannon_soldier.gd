@@ -240,6 +240,7 @@ func take_damage(amount: int) -> void:
 	print("[CANNON] take_damage  amount=", amount, "  hp_left=", health)
 	health_bar.value = health
 	health_bar.visible = true
+	SoundManager.play_sfx_2d("enemy_hit", global_position)
 	body_sprite.modulate = Color(10, 10, 10, 1)
 	var tween: Tween = create_tween()
 	tween.tween_property(body_sprite, "modulate", Color.WHITE, 0.12)

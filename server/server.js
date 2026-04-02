@@ -32,6 +32,18 @@ const pendingCreators = new Map();
  */
 const onlinePlayers = new Map();
 
+/**
+ * socketId → { name: string, roomId: string, isHost: bool }  (per-connection info)
+ * @type {Map<string, {name: string, roomId: string, isHost: boolean}>}
+ */
+const socketInfo = new Map();
+
+/**
+ * roomId → Map<playerName, { isHost: bool, timer: NodeJS.Timeout }>
+ * Players who disconnected mid-game and are waiting to rejoin.
+ */
+const pendingRejoins = new Map();
+
 function findRoomBySocket(socketId) {
   for (const [roomId, room] of rooms) {
     if (room.players.has(socketId)) return { roomId, room };
@@ -79,10 +91,11 @@ io.on('connection', (socket) => {
   socket.on('create_room', ({ player_name }) => {
     const code   = generateRoomCode();
     const roomId = `room_${Date.now()}_${Math.floor(Math.random() * 9999)}`;
-    const room   = { players: new Set([socket.id]), hostId: socket.id, readyCount: 0, code };
+    const room   = { players: new Set([socket.id]), hostId: socket.id, readyCount: 0, code, gameStarted: false };
     rooms.set(roomId, room);
     roomsByCode.set(code, roomId);
     pendingCreators.set(roomId, player_name);
+    socketInfo.set(socket.id, { name: player_name, roomId, isHost: true });
     socket.join(roomId);
     socket.emit('room_created', { code, room_id: roomId });
     console.log(`[room] ${roomId}: created by ${player_name} code=${code}`);
@@ -105,6 +118,13 @@ io.on('connection', (socket) => {
     roomsByCode.delete(upperCode);
     pendingCreators.delete(roomId);
     socket.join(roomId);
+    socketInfo.set(socket.id, { name: player_name, roomId, isHost: false });
+    // Update host's socketInfo with the room
+    for (const [sid, info] of socketInfo) {
+      if (sid !== socket.id && info.roomId === roomId) {
+        info.name = pendingCreators.get(roomId) || info.name || 'HOST';
+      }
+    }
     socket.emit('match_found', { room_id: roomId, partner_name: hostName,  is_host: false });
     io.to(room.hostId).emit('match_found', { room_id: roomId, partner_name: player_name, is_host: true });
     console.log(`[room] ${roomId}: ${player_name} joined host, code=${upperCode}`);
@@ -127,9 +147,37 @@ io.on('connection', (socket) => {
     room.readyCount += 1;
     socket.to(room_id).emit('partner_ready', {});
     if (room.readyCount >= 2) {
+      room.gameStarted = true;
       io.to(room_id).emit('game_start', {});
       console.log(`[room] ${room_id}: game started`);
     }
+  });
+
+  // ── Reconnect (mid-game socket drop) ──────────────────────────────────────
+
+  socket.on('rejoin_room', ({ room_id, player_name, is_host }) => {
+    const room = rooms.get(room_id);
+    const pending = pendingRejoins.get(room_id);
+    if (!room || !pending || !pending.has(player_name)) {
+      socket.emit('rejoin_error', { message: 'Room not found or reconnect window expired' });
+      console.log(`[room] ${room_id}: rejoin rejected for ${player_name}`);
+      return;
+    }
+    const info = pending.get(player_name);
+    clearTimeout(info.timer);
+    pending.delete(player_name);
+    if (pending.size === 0) pendingRejoins.delete(room_id);
+
+    // Restore player into room
+    room.players.add(socket.id);
+    if (info.isHost) room.hostId = socket.id;
+    socket.join(room_id);
+    socketInfo.set(socket.id, { name: player_name, roomId: room_id, isHost: info.isHost });
+    onlinePlayers.set(player_name, socket.id);
+
+    socket.emit('rejoin_confirmed', { room_id, is_host: info.isHost });
+    socket.to(room_id).emit('partner_reconnected', {});
+    console.log(`[room] ${room_id}: ${player_name} rejoined (isHost=${info.isHost})`);
   });
 
   // ── In-game relay (no game logic on the server) ────────────────────────────
@@ -261,20 +309,53 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log(`[-] ${socket.id} disconnected`);
+    const info = socketInfo.get(socket.id);
+    socketInfo.delete(socket.id);
     // Remove from presence registry
     for (const [name, id] of onlinePlayers) {
       if (id === socket.id) { onlinePlayers.delete(name); break; }
     }
-    // Clean up pending room if creator disconnected before anyone joined
     const result = findRoomBySocket(socket.id);
-    if (result) {
-      const { roomId, room } = result;
+    if (!result) return;
+    const { roomId, room } = result;
+    room.players.delete(socket.id);
+
+    if (!room.gameStarted) {
+      // Pre-game: clean up immediately
       if (room.code) roomsByCode.delete(room.code);
       pendingCreators.delete(roomId);
-      socket.to(roomId).emit('partner_disconnected', {});
+      if (room.players.size > 0) socket.to(roomId).emit('partner_disconnected', {});
       rooms.delete(roomId);
-      console.log(`[room] ${roomId}: closed (player disconnected)`);
+      console.log(`[room] ${roomId}: closed before game started`);
+      return;
     }
+
+    if (room.players.size === 0) {
+      // Both gone — clean up
+      rooms.delete(roomId);
+      pendingRejoins.delete(roomId);
+      console.log(`[room] ${roomId}: all players gone, closed`);
+      return;
+    }
+
+    // Game was active: give this player 60s to reconnect
+    const playerName = info ? info.name : '?';
+    const isHost     = info ? info.isHost : (socket.id === room.hostId);
+    socket.to(roomId).emit('partner_disconnected', {});
+
+    const timer = setTimeout(() => {
+      // Grace period expired — tell remaining player it's truly over
+      const pending = pendingRejoins.get(roomId);
+      if (pending) { pending.delete(playerName); if (pending.size === 0) pendingRejoins.delete(roomId); }
+      io.to(roomId).emit('partner_reconnect_failed', {});
+      // Clean up room if empty after notification
+      if (room.players.size === 0) rooms.delete(roomId);
+      console.log(`[room] ${roomId}: ${playerName} reconnect window expired`);
+    }, 60000);
+
+    if (!pendingRejoins.has(roomId)) pendingRejoins.set(roomId, new Map());
+    pendingRejoins.get(roomId).set(playerName, { isHost, timer });
+    console.log(`[room] ${roomId}: ${playerName} disconnected mid-game, 60s reconnect window`);
   });
 });
 
