@@ -12,7 +12,7 @@ var _knockback_velocity := Vector2.ZERO
 var _bodies_in_hit_area: Array[Node2D] = []
 
 ## AI state machine
-enum State { CHASE, ATTACK_STRUCTURE }
+enum State { CHASE, ATTACK_PLAYER, ATTACK_STRUCTURE }
 var _state := State.CHASE
 var _wall_target: Node2D = null
 ## Set when a squad soldier shoots this enemy
@@ -128,6 +128,25 @@ func _physics_process(delta: float) -> void:
 					_state = State.ATTACK_STRUCTURE
 					break
 
+		State.ATTACK_PLAYER:
+			# Stop pressing into the player — stand still and swing
+			velocity = Vector2.ZERO
+			DepenetrationHelper.resolve(self, delta)
+			move_and_slide()
+
+			# If all players left the hit area, resume chasing
+			if _bodies_in_hit_area.is_empty():
+				_state = State.CHASE
+				return
+
+			var hit_target := _bodies_in_hit_area[0]
+			if is_instance_valid(hit_target):
+				body_sprite.rotation = (hit_target.global_position - global_position).angle()
+				health_bar_pivot.rotation = -rotation
+
+			if attack_cooldown.is_stopped():
+				_do_melee_attack(hit_target)
+
 		State.ATTACK_STRUCTURE:
 			velocity = Vector2.ZERO
 			DepenetrationHelper.resolve(self, delta)
@@ -236,19 +255,26 @@ func _on_hit_area_body_entered(body: Node2D) -> void:
 		return
 	if not _bodies_in_hit_area.has(body):
 		_bodies_in_hit_area.append(body)
+	# Switch to stopped attack state so the skeleton doesn't keep pressing into the player
+	if _state == State.CHASE:
+		_state = State.ATTACK_PLAYER
 	if attack_cooldown.is_stopped():
 		_do_melee_attack(body)
 
 func _on_hit_area_body_exited(body: Node2D) -> void:
 	_bodies_in_hit_area.erase(body)
+	if _bodies_in_hit_area.is_empty() and _state == State.ATTACK_PLAYER:
+		_state = State.CHASE
 
 func _on_attack_cooldown_timeout() -> void:
-	# Only re-attack players while chasing; structure-attack state drives its own cycle
-	if _state != State.CHASE:
+	# Structure-attack state drives its own attack cycle inline
+	if _state == State.ATTACK_STRUCTURE:
 		return
-	# Remove any freed nodes, then re-attack the first body still in range
+	# Remove any freed nodes
 	_bodies_in_hit_area = _bodies_in_hit_area.filter(func(b): return is_instance_valid(b))
 	if _bodies_in_hit_area.is_empty():
+		if _state == State.ATTACK_PLAYER:
+			_state = State.CHASE
 		return
 	_do_melee_attack(_bodies_in_hit_area[0])
 

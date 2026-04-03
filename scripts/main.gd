@@ -44,9 +44,17 @@ var _build_timer: Timer
 var _build_timer_paused_remaining: float = 0.0
 var _build_cursor: Polygon2D
 var _build_cursor_cell: Vector2i
+var _cursor_sprite: Sprite2D
+var _cursor_barrel: Sprite2D
 var _current_template_size: String = "small"
 var _template_preview: Node2D
 var _template_preview_cells: Array = []
+
+# Preloaded textures for build-mode sprite previews
+var _tex_wall:         Texture2D = preload("res://assets/structures/sandbag_wall.png")
+var _tex_door:         Texture2D = preload("res://assets/structures/door_closed.png")
+var _tex_tower_base:   Texture2D = preload("res://assets/structures/tower_base.png")
+var _tex_tower_barrel: Texture2D = preload("res://assets/structures/tower_barrel.png")
 var _current_buy_station: Node = null
 var _current_recovery_station: Node = null
 var _tutorial_overlay: Control = null
@@ -101,6 +109,18 @@ func _ready() -> void:
 	_build_cursor.z_index = 10
 	add_child(_build_cursor)
 
+	# Sprite overlay on the single-cell cursor (structure preview, dimmed)
+	_cursor_sprite = Sprite2D.new()
+	_cursor_sprite.scale = Vector2(0.5, 0.5)
+	_cursor_sprite.visible = false
+	_build_cursor.add_child(_cursor_sprite)
+
+	_cursor_barrel = Sprite2D.new()
+	_cursor_barrel.scale = Vector2(0.5, 0.5)
+	_cursor_barrel.rotation_degrees = 180.0
+	_cursor_barrel.visible = false
+	_build_cursor.add_child(_cursor_barrel)
+
 	# Build template preview pool (32 cells = max for large 9x9 template)
 	_template_preview = Node2D.new()
 	_template_preview.z_index = 10
@@ -113,6 +133,19 @@ func _ready() -> void:
 		p.color = Color(0.3, 1.0, 0.3, 0.45)
 		p.visible = false
 		_template_preview.add_child(p)
+
+		# Sprite overlay for this template cell
+		var s := Sprite2D.new()
+		s.scale = Vector2(0.5, 0.5)
+		s.visible = false
+		p.add_child(s)
+
+		var b := Sprite2D.new()
+		b.scale = Vector2(0.5, 0.5)
+		b.rotation_degrees = 180.0
+		b.visible = false
+		p.add_child(b)
+
 		_template_preview_cells.append(p)
 
 	# Reset autoload state so restarts begin fresh
@@ -382,6 +415,8 @@ func _process(_delta: float) -> void:
 			hud.update_build_timer(_build_timer.time_left)
 			SoundManager.notify_build_timer(_build_timer.time_left)
 		hud.notify_build_movement(player != null and player.move_input.length() > 0.1)
+		if player != null and player.move_input.length() > 0.1:
+			hud.hide_build_picker()
 		if BuildManager.selected == "template":
 			_update_template_preview()
 			_build_cursor.visible = false
@@ -417,9 +452,12 @@ func _update_build_cursor() -> void:
 	if BuildManager.selected == "erase":
 		_build_cursor.color = Color(1.0, 0.2, 0.2, 0.5) if BuildManager.is_occupied(cell) \
 							  else Color(0.5, 0.5, 0.5, 0.2)
+		_cursor_sprite.visible = false
+		_cursor_barrel.visible = false
 	else:
 		_build_cursor.color = Color(0.3, 1.0, 0.3, 0.45) if not blocked \
 							  else Color(1.0, 0.2, 0.2, 0.45)
+		_apply_preview_sprites(_cursor_sprite, _cursor_barrel, BuildManager.selected, blocked)
 
 func _update_template_preview() -> void:
 	var size_map := {"small": 5, "medium": 7, "large": 9}
@@ -435,10 +473,37 @@ func _update_template_preview() -> void:
 			var cell_blocked := BuildManager.is_occupied(entry.cell) or BuildManager.is_reserved(entry.cell)
 			poly.color = Color(1.0, 0.2, 0.2, 0.45) if cell_blocked \
 													else Color(0.3, 1.0, 0.3, 0.45)
+			var s: Sprite2D = poly.get_child(0)
+			var b: Sprite2D = poly.get_child(1)
+			_apply_preview_sprites(s, b, entry.type, cell_blocked)
 			poly.visible = true
 		else:
 			poly.visible = false
 	hud.update_template_cost(BuildManager.calculate_template_cost(cells))
+
+func _apply_preview_sprites(sprite_base: Sprite2D, sprite_barrel: Sprite2D, type: String, blocked: bool) -> void:
+	var tint: Color = Color(1.0, 0.4, 0.4, 0.55) if blocked else Color(1.0, 1.0, 1.0, 0.55)
+	match type:
+		"wall":
+			sprite_base.texture = _tex_wall
+			sprite_base.modulate = tint
+			sprite_base.visible = true
+			sprite_barrel.visible = false
+		"door":
+			sprite_base.texture = _tex_door
+			sprite_base.modulate = tint
+			sprite_base.visible = true
+			sprite_barrel.visible = false
+		"tower":
+			sprite_base.texture = _tex_tower_base
+			sprite_base.modulate = tint
+			sprite_base.visible = true
+			sprite_barrel.texture = _tex_tower_barrel
+			sprite_barrel.modulate = tint
+			sprite_barrel.visible = true
+		_:
+			sprite_base.visible = false
+			sprite_barrel.visible = false
 
 func _hide_template_preview() -> void:
 	_template_preview.visible = false
@@ -449,6 +514,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not BuildManager.build_mode:
 		return
 	if event is InputEventScreenTouch and event.pressed:
+		# Any tap outside the picker closes it without opening a new one
+		if hud.build_picker.visible:
+			hud.hide_build_picker()
+			return
 		var world_pos: Vector2 = get_viewport().get_canvas_transform().affine_inverse() * event.position
 		_picker_cell = BuildManager.world_to_cell(world_pos)
 		hud.show_build_picker(event.position)
@@ -463,11 +532,10 @@ func _try_place_at(cell: Vector2i) -> void:
 	if cell == player_cell:
 		hud.flash_build_denied()
 		return
-	# Block placement on any squad member's cell
+	# If a squad member is on this cell, push them aside before building
 	for member in get_tree().get_nodes_in_group("squad_members"):
 		if is_instance_valid(member) and BuildManager.world_to_cell(member.global_position) == cell:
-			hud.flash_build_denied()
-			return
+			_push_squad_member_off_cell(member, cell)
 
 	if BuildManager.selected == "erase":
 		_try_erase_at(cell)
@@ -865,12 +933,10 @@ func _try_place_template() -> void:
 		if entry.cell == player_cell:
 			continue
 		var skip := false
+		# If a squad member is on this template cell, push them aside
 		for member in get_tree().get_nodes_in_group("squad_members"):
 			if is_instance_valid(member) and BuildManager.world_to_cell(member.global_position) == entry.cell:
-				skip = true
-				break
-		if skip:
-			continue
+				_push_squad_member_off_cell(member, entry.cell)
 		var structure := _create_structure(entry.type, entry.cell)
 		add_child(structure)
 		if entry.has("base_rotation") and structure.has_method("set_base_rotation"):

@@ -87,21 +87,31 @@ func _ready() -> void:
 	var camp_md_tex     := load("res://assets/ui/btn_camp_medium.png") as Texture2D
 	var camp_lg_tex     := load("res://assets/ui/btn_camp_large.png")  as Texture2D
 
-	# Palette + picker icons (image only, text cleared)
+	# Palette buttons — icon only, centred
 	for pair: Array in [
 		[wall_btn,  wall_tex],
 		[door_btn,  door_tex],
 		[tower_btn, tower_tex],
-		[$BuildPicker/VBox/WallPickBtn,  wall_tex],
-		[$BuildPicker/VBox/DoorPickBtn,  door_tex],
-		[$BuildPicker/VBox/TowerPickBtn, tower_tex],
 	]:
 		var btn: Button = pair[0]
 		btn.icon = pair[1] as Texture2D
 		btn.expand_icon = true
 		btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		btn.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
+		btn.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
 		btn.text = ""
+
+	# Picker buttons — actual structure textures + name label (left icon, text right)
+	for entry: Array in [
+		[$BuildPicker/VBox/WallPickBtn,  load("res://assets/structures/sandbag_wall.png") as Texture2D, "Wall  20🪙"],
+		[$BuildPicker/VBox/DoorPickBtn,  load("res://assets/structures/door_closed.png")  as Texture2D, "Door  20🪙"],
+		[$BuildPicker/VBox/TowerPickBtn, load("res://assets/structures/tower_base.png")   as Texture2D, "Tower  60🪙"],
+	]:
+		var btn: Button = entry[0]
+		btn.icon = entry[1] as Texture2D
+		btn.expand_icon = false
+		btn.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		btn.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
+		btn.text = entry[2]
 
 	# Camp template button
 	template_btn.icon = camp_tex
