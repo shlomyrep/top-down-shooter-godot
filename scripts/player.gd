@@ -146,9 +146,16 @@ func _physics_process(delta: float) -> void:
 		if velocity.length() > 10.0:
 			body_sprite.play("move")
 			_update_feet(move_input.normalized(), velocity.length())
+			var step_interval := 0.25 if velocity.length() > speed * 0.6 else 0.42
+			_step_timer -= delta
+			if _step_timer <= 0.0:
+				_step_timer = step_interval
+				var snd := "footstep_run" if velocity.length() > speed * 0.6 else "footstep_walk"
+				SoundManager.play_sfx(snd)
 		else:
 			body_sprite.play("idle")
 			_update_feet(Vector2.ZERO, 0.0)
+			_step_timer = 0.0
 		return
 
 	if aim_input.length() > 0.1:

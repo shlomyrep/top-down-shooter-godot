@@ -165,7 +165,9 @@ func notify_build_phase_entered(wave_num: int) -> void:
 func notify_wave_started(wave_num: int) -> void:
 	if not _active:
 		return
-	if wave_num == 2:		_show_step(STEP_MOVE)		_squad_delay.start()
+	if wave_num == 1:
+		_show_step(STEP_MOVE)
+		_squad_delay.start()
 
 
 # ── Internal step machine ────────────────────────────────────────────────────
@@ -208,7 +210,7 @@ func _show_step(idx: int) -> void:
 		STEP_SQUAD:
 			_target_node = _hud.get_node_or_null("SupportPanel/VBox/SquadBtn")
 			_msg_label.text = tr("TUTORIAL_4")
-			_sub_label.text = "Tap the Squad button\nto continue"
+			_sub_label.text = "Gold drops from\nenemies you defeat"
 
 		_:
 			_finish()
@@ -269,7 +271,6 @@ func _process(_delta: float) -> void:
 
 
 func _set_pointer_visible(on: bool) -> void:
-	_dim_rect.visible = on
 	_finger.visible = on
 	_panel.visible = on
 	if on:

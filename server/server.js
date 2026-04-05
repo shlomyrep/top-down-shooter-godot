@@ -1,9 +1,348 @@
 'use strict';
 
-const http   = require('http');
-const { Server } = require('socket.io');
+const http          = require('http');
+const { Server }    = require('socket.io');
+const Database      = require('better-sqlite3');
+const path          = require('path');
+const { URL }       = require('url');
 
-const server = http.createServer();
+// ── Database setup ─────────────────────────────────────────────────────────────
+const DB_PATH = path.join(__dirname, 'resistance.db');
+const db = new Database(DB_PATH);
+db.pragma('journal_mode = WAL');
+db.exec(`
+  CREATE TABLE IF NOT EXISTS players (
+    uuid        TEXT PRIMARY KEY,
+    name        TEXT NOT NULL,
+    xp          INTEGER NOT NULL DEFAULT 0,
+    rank        INTEGER NOT NULL DEFAULT 1,
+    login_streak INTEGER NOT NULL DEFAULT 0,
+    last_login  TEXT,
+    total_kills INTEGER NOT NULL DEFAULT 0,
+    total_games INTEGER NOT NULL DEFAULT 0,
+    best_wave   INTEGER NOT NULL DEFAULT 0,
+    best_coop_wave INTEGER NOT NULL DEFAULT 0,
+    medals      TEXT NOT NULL DEFAULT '[]',
+    title       TEXT NOT NULL DEFAULT 'Survivor',
+    created_at  TEXT NOT NULL DEFAULT (date('now'))
+  );
+  CREATE TABLE IF NOT EXISTS sessions (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid        TEXT NOT NULL,
+    wave        INTEGER NOT NULL,
+    kills       INTEGER NOT NULL,
+    duration_s  INTEGER NOT NULL DEFAULT 0,
+    is_coop     INTEGER NOT NULL DEFAULT 0,
+    partner_uuid TEXT,
+    op_week     TEXT,
+    played_at   TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE TABLE IF NOT EXISTS challenges (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    from_uuid   TEXT NOT NULL,
+    to_uuid     TEXT NOT NULL,
+    from_name   TEXT NOT NULL,
+    wave        INTEGER NOT NULL,
+    kills       INTEGER NOT NULL,
+    status      TEXT NOT NULL DEFAULT 'pending',
+    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE TABLE IF NOT EXISTS weekly_ops (
+    week_key    TEXT PRIMARY KEY,
+    modifier    TEXT NOT NULL,
+    title       TEXT NOT NULL,
+    description TEXT NOT NULL
+  );
+`);
+
+// ── Rank thresholds (XP needed to reach rank N) ───────────────────────────────
+const RANK_TITLES = [
+  '', // 0 unused
+  'Survivor', 'Recruit', 'Scout', 'Ranger', 'Corporal',
+  'Sergeant', 'Staff Sergeant', 'Master Sergeant', 'Warrant Officer', 'Lieutenant',
+  'Captain', 'Major', 'Lt. Colonel', 'Colonel', 'Brigadier',
+  'General', 'Commander', 'Shadow Operative', 'Elite Shadow', 'Shadow Commander'
+];
+function getRankForXP(xp) {
+  // Every 500 XP = 1 rank, capped at 20
+  return Math.min(20, Math.max(1, Math.floor(xp / 500) + 1));
+}
+
+// ── Weekly operation schedule ─────────────────────────────────────────────────
+const WEEKLY_OP_POOL = [
+  { modifier: 'pistol_only',    title: 'IRON WEEK',       description: 'Pistol only. No upgrades. No excuses.' },
+  { modifier: 'double_bugs',    title: 'BUG INVASION',    description: '2× bug spawn rate. Swarm conditions.' },
+  { modifier: 'no_towers',      title: 'BARE HANDED',     description: 'No defense towers. Hold with what you have.' },
+  { modifier: 'fast_waves',     title: 'RAPID ASSAULT',   description: 'Build phase cut to 15s. React fast.' },
+  { modifier: 'elite_enemies',  title: 'ELITE FORCES',    description: 'All enemies have 50% more HP.' },
+  { modifier: 'coin_frenzy',    title: 'GOLD RUSH',       description: 'Enemies drop 2× coins. Upgrade everything.' },
+  { modifier: 'normal',         title: 'STANDARD OPS',    description: 'No modifiers. Prove your skill.' },
+];
+function getWeekKey(date) {
+  const d = date || new Date();
+  const jan1 = new Date(d.getFullYear(), 0, 1);
+  const week = Math.ceil(((d - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+  return `${d.getFullYear()}-W${String(week).padStart(2, '0')}`;
+}
+function ensureWeeklyOp() {
+  const key = getWeekKey();
+  const existing = db.prepare('SELECT * FROM weekly_ops WHERE week_key = ?').get(key);
+  if (existing) return existing;
+  const op = WEEKLY_OP_POOL[Math.abs(parseInt(key.replace(/\D/g,''), 10)) % WEEKLY_OP_POOL.length];
+  db.prepare('INSERT INTO weekly_ops (week_key, modifier, title, description) VALUES (?,?,?,?)')
+    .run(key, op.modifier, op.title, op.description);
+  return { week_key: key, ...op };
+}
+
+// ── Daily missions (deterministic by date seed) ───────────────────────────────
+const MISSION_POOL = [
+  { id: 'kill_30',    label: 'Kill 30 enemies',          type: 'kills',   target: 30,  xp: 150, coins: 25 },
+  { id: 'kill_50',    label: 'Kill 50 enemies',          type: 'kills',   target: 50,  xp: 250, coins: 40 },
+  { id: 'reach_5',    label: 'Reach Wave 5',             type: 'wave',    target: 5,   xp: 200, coins: 30 },
+  { id: 'reach_7',    label: 'Reach Wave 7',             type: 'wave',    target: 7,   xp: 400, coins: 60 },
+  { id: 'airstrike_2',label: 'Use airstrike 2 times',   type: 'airstrike',target: 2,  xp: 120, coins: 20 },
+  { id: 'play_coop',  label: 'Play a co-op game',        type: 'coop',    target: 1,   xp: 200, coins: 35 },
+  { id: 'build_5',    label: 'Place 5 structures',       type: 'builds',  target: 5,   xp: 100, coins: 15 },
+  { id: 'survive_w3', label: 'Survive Wave 3 uninjured', type: 'wave_hp', target: 3,   xp: 300, coins: 50 },
+  { id: 'kill_tank',  label: 'Defeat the Tank boss',     type: 'boss',    target: 1,   xp: 500, coins: 80 },
+  { id: 'play_2',     label: 'Play 2 games today',       type: 'games',   target: 2,   xp: 150, coins: 25 },
+];
+function getDailyMissions(dateStr) {
+  // seed by date string → always same 3 for all players on same day
+  let seed = 0;
+  for (let i = 0; i < dateStr.length; i++) seed = (seed * 31 + dateStr.charCodeAt(i)) >>> 0;
+  const indices = [];
+  let s = seed;
+  while (indices.length < 3) {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    const idx = s % MISSION_POOL.length;
+    if (!indices.includes(idx)) indices.push(idx);
+  }
+  return indices.map(i => MISSION_POOL[i]);
+}
+
+// ── Medal definitions ──────────────────────────────────────────────────────────
+const MEDAL_CHECKS = [
+  { id: 'first_blood',   label: 'First Blood',      check: (p, s) => p.total_kills >= 1 },
+  { id: 'wave5',         label: 'Wave 5 Survivor',  check: (p, s) => s.wave >= 5 },
+  { id: 'wave7',         label: 'Iron Will',         check: (p, s) => s.wave >= 7 },
+  { id: 'wave10',        label: 'Legend',            check: (p, s) => p.best_wave >= 10 },
+  { id: 'wave15',        label: 'Legendary',         check: (p, s) => p.best_wave >= 15 },
+  { id: 'coop_debut',    label: 'Co-op Debut',       check: (p, s) => s.is_coop === 1 },
+  { id: 'veteran',       label: 'Veteran',           check: (p, s) => p.total_games >= 10 },
+  { id: 'fifty_games',   label: 'The Resistance',    check: (p, s) => p.total_games >= 50 },
+  { id: 'boss_slayer',   label: 'Boss Slayer',       check: (p, s) => s.wave >= 7 },
+  { id: 'kill100',       label: 'Century',           check: (p, s) => p.total_kills >= 100 },
+  { id: 'kill500',       label: 'Executioner',       check: (p, s) => p.total_kills >= 500 },
+];
+
+// ── Streak bonus helper ────────────────────────────────────────────────────────
+function getStreakBonus(streak) {
+  if (streak >= 30) return { coins: 0,  weapon: 3,   label: 'Start with Rifle + bonus XP', xp_mult: 1.5 };
+  if (streak >= 14) return { coins: 0,  weapon: 2,   label: 'Start with Rifle',             xp_mult: 1.0 };
+  if (streak >=  7) return { coins: 50, weapon: 0,   label: '+50 starting coins',           xp_mult: 1.0 };
+  if (streak >=  3) return { coins: 30, weapon: 1,   label: 'Start with Shotgun',           xp_mult: 1.0 };
+  if (streak >=  1) return { coins: 15, weapon: 0,   label: '+15 starting coins',           xp_mult: 1.0 };
+  return { coins: 0, weapon: 0, label: '', xp_mult: 1.0 };
+}
+
+// ── HTTP server with REST + Socket.IO ─────────────────────────────────────────
+const server = http.createServer((req, res) => {
+  const base = `http://${req.headers.host}`;
+  let u;
+  try { u = new URL(req.url, base); } catch { res.writeHead(400); res.end(); return; }
+  const method = req.method.toUpperCase();
+
+  const json = (code, obj) => {
+    res.writeHead(code, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+    res.end(JSON.stringify(obj));
+  };
+  const readBody = () => new Promise((resolve, reject) => {
+    let body = '';
+    req.on('data', c => { body += c; if (body.length > 65536) reject(new Error('body too large')); });
+    req.on('end', () => { try { resolve(JSON.parse(body || '{}')); } catch { reject(new Error('bad json')); } });
+    req.on('error', reject);
+  });
+
+  // OPTIONS preflight
+  if (method === 'OPTIONS') {
+    res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' });
+    res.end(); return;
+  }
+
+  // POST /player/register  { uuid, name }
+  if (method === 'POST' && u.pathname === '/player/register') {
+    readBody().then(body => {
+      const { uuid, name } = body;
+      if (!uuid || !name) { json(400, { error: 'uuid and name required' }); return; }
+      const today = new Date().toISOString().slice(0, 10);
+      let player = db.prepare('SELECT * FROM players WHERE uuid = ?').get(uuid);
+      if (!player) {
+        db.prepare('INSERT INTO players (uuid, name, last_login) VALUES (?,?,?)').run(uuid, name.toUpperCase().slice(0, 20), today);
+        player = db.prepare('SELECT * FROM players WHERE uuid = ?').get(uuid);
+      } else {
+        db.prepare('UPDATE players SET name = ? WHERE uuid = ?').run(name.toUpperCase().slice(0, 20), uuid);
+        player = db.prepare('SELECT * FROM players WHERE uuid = ?').get(uuid);
+      }
+      // Streak logic
+      let streak = player.login_streak;
+      const last = player.last_login;
+      if (last !== today) {
+        const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+        const yStr = yesterday.toISOString().slice(0, 10);
+        streak = (last === yStr) ? streak + 1 : 1;
+        db.prepare('UPDATE players SET login_streak = ?, last_login = ? WHERE uuid = ?').run(streak, today, uuid);
+        player = db.prepare('SELECT * FROM players WHERE uuid = ?').get(uuid);
+      }
+      const bonus  = getStreakBonus(streak);
+      const missions = getDailyMissions(today);
+      const weeklyOp = ensureWeeklyOp();
+      json(200, {
+        uuid: player.uuid, name: player.name, xp: player.xp, rank: player.rank,
+        title: RANK_TITLES[player.rank] || 'Survivor',
+        login_streak: player.login_streak, streak_bonus: bonus,
+        total_kills: player.total_kills, total_games: player.total_games,
+        best_wave: player.best_wave, best_coop_wave: player.best_coop_wave,
+        medals: JSON.parse(player.medals || '[]'),
+        daily_missions: missions, weekly_op: weeklyOp,
+      });
+    }).catch(e => json(400, { error: e.message }));
+    return;
+  }
+
+  // POST /session  { uuid, wave, kills, duration_s, is_coop, partner_uuid, op_week }
+  if (method === 'POST' && u.pathname === '/session') {
+    readBody().then(body => {
+      const { uuid, wave, kills, duration_s, is_coop, partner_uuid, op_week } = body;
+      if (!uuid || wave == null || kills == null) { json(400, { error: 'uuid, wave, kills required' }); return; }
+      const player = db.prepare('SELECT * FROM players WHERE uuid = ?').get(uuid);
+      if (!player) { json(404, { error: 'player not found' }); return; }
+
+      // Record session
+      db.prepare('INSERT INTO sessions (uuid, wave, kills, duration_s, is_coop, partner_uuid, op_week) VALUES (?,?,?,?,?,?,?)')
+        .run(uuid, wave, kills, duration_s || 0, is_coop ? 1 : 0, partner_uuid || null, op_week || null);
+
+      // Update player stats
+      const newBestWave     = Math.max(player.best_wave, wave);
+      const newBestCoop     = is_coop ? Math.max(player.best_coop_wave, wave) : player.best_coop_wave;
+      const xpGained        = Math.round(wave * 10 + kills * 2);
+      const newXP           = player.xp + xpGained;
+      const newRank         = getRankForXP(newXP);
+      const rankedUp        = newRank > player.rank;
+
+      db.prepare(`UPDATE players SET xp=?, rank=?, total_kills=total_kills+?, total_games=total_games+1,
+                  best_wave=?, best_coop_wave=? WHERE uuid=?`)
+        .run(newXP, newRank, kills, newBestWave, newBestCoop, uuid);
+
+      const updated = db.prepare('SELECT * FROM players WHERE uuid = ?').get(uuid);
+
+      // Medal checks
+      const currentMedals = JSON.parse(updated.medals || '[]');
+      const sessionData = { wave, kills, is_coop: is_coop ? 1 : 0 };
+      const newMedals = [];
+      for (const m of MEDAL_CHECKS) {
+        if (!currentMedals.includes(m.id) && m.check(updated, sessionData)) {
+          currentMedals.push(m.id);
+          newMedals.push({ id: m.id, label: m.label });
+        }
+      }
+      if (newMedals.length > 0) {
+        db.prepare('UPDATE players SET medals = ? WHERE uuid = ?').run(JSON.stringify(currentMedals), uuid);
+      }
+
+      json(200, {
+        xp_gained: xpGained, new_xp: newXP, new_rank: newRank,
+        new_title: RANK_TITLES[newRank] || 'Survivor',
+        ranked_up: rankedUp, new_medals: newMedals,
+        total_kills: updated.total_kills, total_games: updated.total_games,
+        best_wave: updated.best_wave,
+      });
+    }).catch(e => json(400, { error: e.message }));
+    return;
+  }
+
+  // GET /leaderboard/global?limit=25
+  if (method === 'GET' && u.pathname === '/leaderboard/global') {
+    const limit = Math.min(50, parseInt(u.searchParams.get('limit') || '25', 10));
+    const rows = db.prepare('SELECT name, best_wave, rank, title FROM players ORDER BY best_wave DESC, xp DESC LIMIT ?').all(limit);
+    json(200, { leaderboard: rows });
+    return;
+  }
+
+  // GET /leaderboard/friends?names=A,B,C
+  if (method === 'GET' && u.pathname === '/leaderboard/friends') {
+    const raw = u.searchParams.get('names') || '';
+    const names = raw.split(',').map(n => n.trim().toUpperCase()).filter(Boolean);
+    if (names.length === 0) { json(200, { leaderboard: [] }); return; }
+    const placeholders = names.map(() => '?').join(',');
+    const rows = db.prepare(`SELECT name, best_wave, rank, title FROM players WHERE name IN (${placeholders}) ORDER BY best_wave DESC`).all(...names);
+    json(200, { leaderboard: rows });
+    return;
+  }
+
+  // GET /leaderboard/weekly?limit=25
+  if (method === 'GET' && u.pathname === '/leaderboard/weekly') {
+    const limit = Math.min(50, parseInt(u.searchParams.get('limit') || '25', 10));
+    const weekStart = (() => {
+      const d = new Date(); const day = d.getDay();
+      d.setDate(d.getDate() - ((day + 6) % 7)); // Monday
+      return d.toISOString().slice(0, 10);
+    })();
+    const rows = db.prepare(`
+      SELECT p.name, MAX(s.wave) as best_wave_this_week, p.rank, p.title
+      FROM sessions s JOIN players p ON p.uuid = s.uuid
+      WHERE date(s.played_at) >= ? GROUP BY s.uuid ORDER BY best_wave_this_week DESC LIMIT ?
+    `).all(weekStart, limit);
+    json(200, { leaderboard: rows, week_start: weekStart });
+    return;
+  }
+
+  // POST /challenge  { from_uuid, to_name, from_name, wave, kills }
+  if (method === 'POST' && u.pathname === '/challenge') {
+    readBody().then(body => {
+      const { from_uuid, to_name, from_name, wave, kills } = body;
+      if (!from_uuid || !to_name || wave == null) { json(400, { error: 'missing fields' }); return; }
+      const target = db.prepare('SELECT uuid FROM players WHERE name = ?').get((to_name || '').toUpperCase());
+      if (!target) { json(404, { error: 'friend not found' }); return; }
+      db.prepare('INSERT INTO challenges (from_uuid, to_uuid, from_name, wave, kills) VALUES (?,?,?,?,?)')
+        .run(from_uuid, target.uuid, from_name, wave, kills);
+      // Notify via socket if target is online
+      const targetSocketId = onlinePlayers.get(to_name.toUpperCase());
+      if (targetSocketId) {
+        io.to(targetSocketId).emit('challenge_received', { from_name, wave, kills });
+      }
+      json(200, { sent: true });
+    }).catch(e => json(400, { error: e.message }));
+    return;
+  }
+
+  // GET /challenges?uuid=...
+  if (method === 'GET' && u.pathname === '/challenges') {
+    const uuid = u.searchParams.get('uuid');
+    if (!uuid) { json(400, { error: 'uuid required' }); return; }
+    const rows = db.prepare(`SELECT from_name, wave, kills, created_at FROM challenges WHERE to_uuid = ? AND status = 'pending' ORDER BY created_at DESC LIMIT 10`).all(uuid);
+    json(200, { challenges: rows });
+    return;
+  }
+
+  // GET /weekly_op
+  if (method === 'GET' && u.pathname === '/weekly_op') {
+    const op = ensureWeeklyOp();
+    json(200, op);
+    return;
+  }
+
+  // GET /daily_missions?date=YYYY-MM-DD
+  if (method === 'GET' && u.pathname === '/daily_missions') {
+    const date = u.searchParams.get('date') || new Date().toISOString().slice(0, 10);
+    json(200, { missions: getDailyMissions(date), date });
+    return;
+  }
+
+  // 404
+  json(404, { error: 'not found' });
+});
+
 const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] },
 });

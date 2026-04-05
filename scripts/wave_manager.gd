@@ -62,15 +62,34 @@ const WAVE_CONFIGS: Array = [
 ]
 
 func get_wave_config(wave_number: int) -> Dictionary:
+	var cfg: Dictionary
 	if wave_number <= WAVE_CONFIGS.size():
-		return WAVE_CONFIGS[wave_number - 1]
-	# Auto-generate: 20 + wave*5 enemies, +8 speed and +10 health per wave beyond defined
-	var count := int((20 + wave_number * 5) * 0.9)
-	return {
-		"wave": wave_number,
-		"enemy_count": count,
-		"title": "WAVE_AUTO_TITLE",
-		"subtitle": "WAVE_AUTO_SUBTITLE",
-		"speed_bonus": float(wave_number - 1) * 8.0,
-		"health_bonus": (wave_number - 1) * 10,
-	}
+		cfg = WAVE_CONFIGS[wave_number - 1].duplicate()
+	else:
+		# Auto-generate: 20 + wave*5 enemies, +8 speed and +10 health per wave beyond defined
+		var count := int((20 + wave_number * 5) * 0.9)
+		cfg = {
+			"wave": wave_number,
+			"enemy_count": count,
+			"title": "WAVE_AUTO_TITLE",
+			"subtitle": "WAVE_AUTO_SUBTITLE",
+			"speed_bonus": float(wave_number - 1) * 8.0,
+			"health_bonus": (wave_number - 1) * 10,
+		}
+	# ── Weekly operation modifier ─────────────────────────────────────────────
+	var op_modifier: String = ProgressionManager.weekly_op.get("modifier", "normal")
+	match op_modifier:
+		"double_bugs":
+			cfg["op_double_bugs"] = true
+		"no_towers":
+			cfg["op_no_towers"] = true
+		"elite_enemies":
+			cfg["health_bonus"] = cfg.get("health_bonus", 0) + 20
+			cfg["speed_bonus"]  = cfg.get("speed_bonus", 0.0) + 15.0
+		"fast_waves":
+			cfg["op_fast_waves"] = true  # main.gd reads this flag to shorten build timer
+		"coin_frenzy":
+			cfg["op_coin_frenzy"] = true  # coin.gd reads this flag for double drop
+		"pistol_only":
+			cfg["op_pistol_only"] = true  # main.gd enforces weapon lock
+	return cfg

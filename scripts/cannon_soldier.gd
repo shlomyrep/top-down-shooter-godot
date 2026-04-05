@@ -32,6 +32,7 @@ signal died_at(pos: Vector2)
 @onready var health_bar_pivot: Node2D = $HealthBarPivot
 
 var _cannonball_scene: PackedScene = preload("res://scenes/cannonball.tscn")
+var _body_texture: Texture2D = preload("res://assets/enemies/cannon_soldier/cs_walk_u5.png")
 
 func _ready() -> void:
 	health = max_health
@@ -48,7 +49,7 @@ func _setup_animations() -> void:
 	frames.add_animation("idle")
 	frames.set_animation_loop("idle", false)
 	frames.set_animation_speed("idle", 1.0)
-	frames.add_frame("idle", load("res://assets/enemies/cannon_soldier/cs_walk_u5.png"))
+	frames.add_frame("idle", _body_texture)
 	body_sprite.sprite_frames = frames
 	body_sprite.play("idle")
 
@@ -131,7 +132,7 @@ func _physics_process(delta: float) -> void:
 			DepenetrationHelper.resolve(self, delta)
 			move_and_slide()
 			body_sprite.rotation = dir.angle() + PI / 2.0
-			health_bar_pivot.rotation = -rotation
+			health_bar_pivot.rotation = -body_sprite.rotation
 			var d := global_position.distance_to(_wall_target.global_position)
 			if d <= attack_range:
 				print("[CANNON] APPROACH_WALL → ATTACK_WALL  dist=", snappedf(d,1.0))
@@ -143,7 +144,7 @@ func _physics_process(delta: float) -> void:
 			move_and_slide()
 			var dir := (_wall_target.global_position - global_position).normalized()
 			body_sprite.rotation = dir.angle() + PI / 2.0
-			health_bar_pivot.rotation = -rotation
+			health_bar_pivot.rotation = -body_sprite.rotation
 			if _attack_timer <= 0.0:
 				print("[CANNON] FIRE  target=", _wall_target.global_position)
 				_fire_cannonball(_wall_target.global_position)

@@ -42,7 +42,7 @@ const AMBIENT_VOL_DB := -22.0
 const _SFX_VOLUME_OVERRIDES: Dictionary = {
 	"footstep_walk":    -14.0,  # -80% amplitude
 	"footstep_run":     -14.0,  # -80% amplitude
-	"enemy_melee_swing": -4.4,  # -40% amplitude
+	"enemy_melee_swing": -9.5,  # -67% amplitude
 	"player_hurt":       -4.4,  # -40% amplitude
 	"enemy_hit":         -6.0,  # -50% amplitude
 }

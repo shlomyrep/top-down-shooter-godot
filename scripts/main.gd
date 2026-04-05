@@ -196,6 +196,19 @@ func _ready() -> void:
 		_tutorial_overlay.request_resume_build.connect(_on_tutorial_resume_build)
 		_tutorial_overlay.start()
 
+	# ── Progression: session start + streak bonus ────────────────────────────
+	ProgressionManager.session_start(GameData.is_multiplayer)
+	var bonus_coins := ProgressionManager.get_streak_bonus_coins() + ProgressionManager.consume_mission_coin_rewards()
+	if bonus_coins > 0:
+		coins += bonus_coins
+		hud.update_coins(coins)
+	var bonus_weapon := ProgressionManager.get_streak_bonus_weapon()
+	if bonus_weapon > 0:
+		var weapon_names := ["pistol", "shotgun", "rifle", "lmg"]
+		if bonus_weapon < weapon_names.size():
+			WeaponManager.current_weapon = weapon_names[bonus_weapon]
+			hud.update_weapon(WeaponManager.get_current()["name"])
+
 	_begin_wave(wave)
 	if GameData.is_multiplayer:
 		_init_multiplayer()
@@ -286,6 +299,7 @@ func _begin_wave(wave_number: int) -> void:
 	_confirmed_kills.clear()
 	spawn_timer.start()
 	hud.update_wave(wave_number)
+	ProgressionManager.on_wave_reached(wave_number)
 	# Wave music & voice
 	if wave_number == 7:
 		SoundManager.play_music("boss_wave")
@@ -529,6 +543,12 @@ func _try_place_at(cell: Vector2i) -> void:
 	if BuildManager.is_reserved(cell):
 		hud.flash_build_denied()
 		return
+	# Weekly op: no_towers — block tower placement
+	if BuildManager.selected == "tower":
+		var current_cfg := WaveManager.get_wave_config(wave)
+		if current_cfg.get("op_no_towers", false):
+			hud.flash_build_denied()
+			return
 	# Block placement on the player's current cell
 	var player_cell := BuildManager.world_to_cell(player.global_position)
 	if cell == player_cell:
@@ -584,6 +604,7 @@ func _try_place_at(cell: Vector2i) -> void:
 	var structure := _create_structure(BuildManager.selected, cell)
 	add_child(structure)
 	BuildManager.register(cell, structure)
+	ProgressionManager.on_structure_built()
 	SoundManager.play_sfx(BuildManager.selected + "_place")
 	if GameData.is_multiplayer:
 		NetworkManager.send_structure_placed(BuildManager.selected, cell.x, cell.y)
@@ -630,7 +651,9 @@ func _on_spawn_timer_timeout() -> void:
 	var is_tank   := wave >= 7 and not _tank_spawned_this_wave
 	var is_elite  := not is_tank and wave >= 6 and randf() < 0.10
 	var is_cannon := not is_tank and not is_elite and wave >= 5 and randf() < 0.15
-	var is_bug    := not is_tank and not is_elite and not is_cannon and wave >= 3 and randf() < 0.40
+	# Weekly op: double_bugs — bug chance 80% instead of 40%
+	var bug_chance := 0.80 if config.get("op_double_bugs", false) else 0.40
+	var is_bug    := not is_tank and not is_elite and not is_cannon and wave >= 3 and randf() < bug_chance
 	var enemy: CharacterBody2D
 	if is_tank:
 		enemy = tank_scene.instantiate() as CharacterBody2D
@@ -704,6 +727,7 @@ func _on_enemy_died_at(pos: Vector2) -> void:
 	score += 10
 	_enemies_killed_this_wave += 1
 	_total_kills += 1
+	ProgressionManager.on_enemy_killed()
 	_spawn_coin(pos)
 	_check_wave_complete()
 
@@ -715,6 +739,7 @@ func _on_enemy_died_host(net_id: String, pos: Vector2) -> void:
 	score += 10
 	_enemies_killed_this_wave += 1
 	_total_kills += 1
+	ProgressionManager.on_enemy_killed()
 	_spawn_coin(pos, net_id)  # use enemy net_id so partner can match it
 	_check_wave_complete()
 	NetworkManager.send_enemy_killed({"id": net_id, "tx": pos.x, "ty": pos.y})
@@ -764,13 +789,19 @@ func _find_enemy_by_net_id(id: String) -> Node:
 func _spawn_coin(pos: Vector2, coin_net_id: String = "") -> void:
 	var coin := coin_scene.instantiate()
 	coin.global_position = pos
-	# In multiplayer a stable net_id (from the enemy) is passed in so both devices
-	# generate the same key and the coin_collected broadcast removes the right coin.
-	# In solo / fallback, derive a position-based key (no dedup needed).
 	var net_id := coin_net_id if coin_net_id != "" else ("solo_%.0f_%.0f" % [pos.x, pos.y])
 	_coin_registry[net_id] = coin
 	coin.collected.connect(func(amount: int): _on_coin_collected(amount, net_id))
 	call_deferred("add_child", coin)
+	# Weekly op: coin_frenzy spawns a second coin at a slight offset
+	var wave_cfg := WaveManager.get_wave_config(wave)
+	if wave_cfg.get("op_coin_frenzy", false):
+		var coin2 := coin_scene.instantiate()
+		coin2.global_position = pos + Vector2(randf_range(-20, 20), randf_range(-20, 20))
+		var net_id2 := net_id + "_frenzy"
+		_coin_registry[net_id2] = coin2
+		coin2.collected.connect(func(amount: int): _on_coin_collected(amount, net_id2))
+		call_deferred("add_child", coin2)
 
 func _on_coin_collected(amount: int, net_id: String = "") -> void:
 	# Guard: if the partner already collected this coin (race condition), skip.
@@ -817,7 +848,15 @@ func _start_between_wave() -> void:
 
 func _on_between_wave_timeout() -> void:
 	hud.hide_wave_transition()
+	var wave_cfg := WaveManager.get_wave_config(wave + 1)
 	var scaled_build := BUILD_DURATION + float(wave) * 5.0
+	# Weekly op: fast_waves modifier cuts build time to 15s
+	if wave_cfg.get("op_fast_waves", false):
+		scaled_build = 15.0
+	# Weekly op: pistol_only modifier — lock weapon back to pistol each build phase
+	if wave_cfg.get("op_pistol_only", false):
+		WeaponManager.current_weapon = "pistol"
+		hud.update_weapon(WeaponManager.get_current()["name"])
 	SoundManager.on_build_start()  # swap to build_bg music + ambient, reset timer warning
 	hud.show_build_mode(scaled_build)
 	BuildManager.start_build_mode()
@@ -1006,6 +1045,7 @@ func _on_airstrike_pressed() -> void:
 		return
 	coins -= SupportManager.AIRSTRIKE_COST
 	hud.update_coins(coins)
+	ProgressionManager.on_airstrike_used()
 	SupportManager.use_airstrike()
 	var strike := airstrike_scene.instantiate()
 	strike.global_position = player.global_position
