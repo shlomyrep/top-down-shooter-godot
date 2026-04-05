@@ -770,7 +770,7 @@ func _spawn_coin(pos: Vector2, coin_net_id: String = "") -> void:
 	var net_id := coin_net_id if coin_net_id != "" else ("solo_%.0f_%.0f" % [pos.x, pos.y])
 	_coin_registry[net_id] = coin
 	coin.collected.connect(func(amount: int): _on_coin_collected(amount, net_id))
-	add_child(coin)
+	call_deferred("add_child", coin)
 
 func _on_coin_collected(amount: int, net_id: String = "") -> void:
 	# Guard: if the partner already collected this coin (race condition), skip.
