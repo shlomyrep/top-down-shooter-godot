@@ -1,6 +1,8 @@
 [gd_scene format=3 uid="uid://buystation01"]
 
 [ext_resource type="Script" path="res://scripts/buy_station.gd" id="1_bs"]
+[ext_resource type="CompressedTexture2D" uid="uid://dwxko8dryt623" path="res://assets/ui/floating-weapon.png" id="2_fw"]
+[ext_resource type="CompressedTexture2D" uid="uid://exylp7eszu734" path="res://assets/ui/weapon-square.png" id="3_ws"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_trigger"]
 size = Vector2(80, 80)
@@ -27,19 +29,13 @@ script = ExtResource("1_bs")
 [node name="TriggerZone" type="CollisionShape2D" parent="."]
 shape = SubResource("RectangleShape2D_trigger")
 
-[node name="StationBody" type="Polygon2D" parent="."]
-polygon = PackedVector2Array(-28, -28, 28, -28, 28, 28, -28, 28)
-color = Color(0.12, 0.16, 0.12, 0.95)
+[node name="StationBody" type="Sprite2D" parent="."]
+texture = ExtResource("3_ws")
 
-[node name="NameLabel" type="Label" parent="."]
-offset_left = -28.0
-offset_top = -88.0
-offset_right = 28.0
-offset_bottom = -48.0
-text = "🔫"
-theme_override_font_sizes/font_size = 34
-horizontal_alignment = 1
-modulate = Color(1.0, 0.80, 0.18, 1.0)
+[node name="NameLabel" type="Sprite2D" parent="."]
+position = Vector2(0, -64)
+texture = ExtResource("2_fw")
+scale = Vector2(0.5, 0.5)
 
 [node name="CostLabel" type="Label" parent="."]
 offset_left = -80.0

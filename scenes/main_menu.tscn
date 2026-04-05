@@ -145,6 +145,12 @@ text = "MULTI_BTN"
 auto_translate_mode = 1
 icon = ExtResource("4_multi")
 
+[node name="TutorialToggleBtn" type="Button" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox/Buttons"]
+size_flags_horizontal = 3
+text = "📖 TUTORIAL: ON"
+theme_override_font_sizes/font_size = 15
+theme_override_colors/font_color = Color(0.62, 0.78, 0.55, 0.9)
+
 [node name="Spacer2" type="Control" parent="CenterContainer/MainPanel/PanelMargin/InnerVBox"]
 custom_minimum_size = Vector2(0, 2)
 

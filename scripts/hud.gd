@@ -161,7 +161,7 @@ func _ready() -> void:
 	# Door toggle button — show open icon when doors are closed, closed icon when open
 	_tex_door_open   = load("res://assets/ui/btn_door_tog_open.png")   as Texture2D
 	_tex_door_closed = load("res://assets/ui/btn_door_tog_closed.png") as Texture2D
-	door_toggle_btn.icon = _tex_door_open  # doors start closed → show open icon
+	door_toggle_btn.icon = _tex_door_closed  # doors start closed → show closed icon
 	door_toggle_btn.expand_icon = true
 	door_toggle_btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	door_toggle_btn.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -493,8 +493,8 @@ func _on_door_toggle_btn_pressed() -> void:
 		return
 	_door_toggle_cooldown = 0.35
 	_doors_open = !_doors_open
-	# Show opposite-state icon: doors open → show closed icon (tap to close), and vice versa
-	door_toggle_btn.icon = _tex_door_closed if _doors_open else _tex_door_open
+	# Show current-state icon: doors open → show open icon, doors closed → show closed icon
+	door_toggle_btn.icon = _tex_door_open if _doors_open else _tex_door_closed
 	door_toggle_pressed.emit()
 
 # ─── Support callables ────────────────────────────────────────────────────────

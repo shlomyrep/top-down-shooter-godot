@@ -15,6 +15,8 @@ var shield: int = 0
 @onready var _muzzle_flash_light := $GunPivot/Muzzle/MuzzleFlashLight
 
 var _screen_flash_rect: ColorRect = null
+var _near_death_rect: ColorRect = null
+var _near_death_tween: Tween = null
 
 var _is_shooting := false
 var _step_timer: float = 0.0
@@ -39,6 +41,8 @@ signal weapon_changed(weapon_name: String)
 
 ## True while waiting for the partner to revive (multiplayer only).
 var is_downed := false
+## True once health hits 0 — blocks all movement until scene changes.
+var is_dead := false
 
 func _ready() -> void:
 	health = max_health
@@ -56,6 +60,13 @@ func _ready() -> void:
 	_screen_flash_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_screen_flash_rect.z_index = 5
 	get_tree().current_scene.get_node("UILayer").add_child(_screen_flash_rect)
+	# Persistent near-death dim overlay (dark red, sits below the hit flash)
+	_near_death_rect = ColorRect.new()
+	_near_death_rect.color = Color(0.15, 0.0, 0.0, 0.0)
+	_near_death_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_near_death_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_near_death_rect.z_index = 4
+	get_tree().current_scene.get_node("UILayer").add_child(_near_death_rect)
 
 func _setup_animations() -> void:
 	# --- Body / torso (handgun) ---
@@ -106,7 +117,7 @@ func _on_animation_finished() -> void:
 	_is_shooting = false
 
 func _physics_process(delta: float) -> void:
-	if is_downed:
+	if is_dead or is_downed:
 		velocity = Vector2.ZERO
 		move_and_slide()
 		return
@@ -254,8 +265,12 @@ func take_damage(amount: int) -> void:
 		if health <= 20 and not _low_health_warned:
 			_low_health_warned = true
 			SoundManager.play_voice("lh_%d" % (randi() % 2 + 1), SoundManager.VoicePriority.HIGH)
+		if health <= 20 and health > 0:
+			_start_near_death_pulse()
 		if health <= 0:
 			health = 0
+			is_dead = true
+			_stop_near_death_pulse()
 			SoundManager.play_sfx("player_death_sp")
 			if GameData.is_multiplayer:
 				downed.emit()  ## Let main.gd decide between downed vs. game-over
@@ -269,6 +284,7 @@ func revive(hp_pct: float = 0.5) -> void:
 	health_changed.emit(health, max_health)
 	body_sprite.play("idle")
 	_low_health_warned = false
+	_stop_near_death_pulse()
 	SoundManager.play_sfx("player_revived")
 	SoundManager.play_voice("pr_%d" % (randi() % 2 + 1), SoundManager.VoicePriority.HIGH)
 
@@ -277,6 +293,7 @@ func heal(amount: int) -> void:
 	health_changed.emit(health, max_health)
 	if health > 20:
 		_low_health_warned = false
+		_stop_near_death_pulse()
 	SoundManager.play_sfx("player_heal")
 
 func add_shield(amount: int) -> void:
@@ -287,6 +304,22 @@ func add_shield(amount: int) -> void:
 
 func _update_aura_visibility() -> void:
 	shield_aura.visible = shield > 0
+
+func _start_near_death_pulse() -> void:
+	if _near_death_tween and _near_death_tween.is_running():
+		return  # Already pulsing
+	if _near_death_rect:
+		_near_death_tween = create_tween().set_loops()
+		_near_death_tween.tween_property(_near_death_rect, "color:a", 0.45, 0.6)
+		_near_death_tween.tween_property(_near_death_rect, "color:a", 0.18, 0.6)
+
+func _stop_near_death_pulse() -> void:
+	if _near_death_tween:
+		_near_death_tween.kill()
+		_near_death_tween = null
+	if _near_death_rect:
+		var ft := create_tween()
+		ft.tween_property(_near_death_rect, "color:a", 0.0, 0.4)
 
 func _flash() -> void:
 	body_sprite.modulate = Color(10, 10, 10, 1)

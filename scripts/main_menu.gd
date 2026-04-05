@@ -4,12 +4,15 @@ extends Control
 @onready var player_name_label: Label = $BottomBar/PlayerNameLabel
 @onready var solo_btn: Button = $CenterContainer/MainPanel/PanelMargin/InnerVBox/Buttons/SoloBtn
 @onready var multi_btn: Button = $CenterContainer/MainPanel/PanelMargin/InnerVBox/Buttons/MultiBtn
+@onready var tutorial_toggle_btn: Button = $CenterContainer/MainPanel/PanelMargin/InnerVBox/Buttons/TutorialToggleBtn
 @onready var name_dialog: Control = $NameDialog
 @onready var name_edit: LineEdit = $NameDialog/DialogCenter/DialogPanel/DialogMargin/DialogVBox/NameEdit
 
 func _ready() -> void:
 	_apply_styles()
 	_refresh_labels()
+	_refresh_tutorial_btn()
+	tutorial_toggle_btn.pressed.connect(_on_tutorial_toggle_btn_pressed)
 	SoundManager.play_music("menu_bg")
 	# Animate panel fade-in
 	var panel: Control = $CenterContainer/MainPanel
@@ -88,3 +91,18 @@ func _on_confirm_btn_pressed() -> void:
 
 func _on_cancel_btn_pressed() -> void:
 	name_dialog.visible = false
+
+func _refresh_tutorial_btn() -> void:
+	if GameData.tutorial_enabled:
+		tutorial_toggle_btn.text = "📖 TUTORIAL: ON"
+		tutorial_toggle_btn.add_theme_color_override("font_color", Color(0.62, 0.78, 0.55, 0.9))
+	else:
+		tutorial_toggle_btn.text = "📖 TUTORIAL: OFF"
+		tutorial_toggle_btn.add_theme_color_override("font_color", Color(0.55, 0.55, 0.55, 0.7))
+
+func _on_tutorial_toggle_btn_pressed() -> void:
+	GameData.tutorial_enabled = not GameData.tutorial_enabled
+	if GameData.tutorial_enabled:
+		GameData.tutorial_plays = 0
+	GameData.force_save()
+	_refresh_tutorial_btn()

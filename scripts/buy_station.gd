@@ -11,7 +11,7 @@ signal player_exited
 signal buy_requested(weapon_id: String, cost: int)
 
 @onready var _dwell_bar: ProgressBar = $DwellBar
-@onready var _icon_label: Label = $NameLabel
+@onready var _icon_label: Node2D = $NameLabel
 
 var _player_inside := false
 var _dwell_timer: Timer

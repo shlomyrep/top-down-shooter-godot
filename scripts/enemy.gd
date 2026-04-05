@@ -179,8 +179,17 @@ func take_damage(amount: int) -> void:
 		_is_dead = true
 		died_at.emit(global_position)
 		SoundManager.play_sfx_2d("skeleton_death", global_position)
-		_spawn_death_effect()
+		if _is_on_screen():
+			_spawn_death_effect()
 		queue_free()
+
+func _is_on_screen() -> bool:
+	var camera := get_viewport().get_camera_2d()
+	if camera == null:
+		return true
+	var half_size := get_viewport_rect().size / 2.0 / camera.zoom
+	var cam_pos := camera.get_screen_center_position()
+	return Rect2(cam_pos - half_size, half_size * 2.0).has_point(global_position)
 
 func _flash() -> void:
 	var tween: Tween = create_tween()

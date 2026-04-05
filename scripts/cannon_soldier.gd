@@ -249,7 +249,8 @@ func take_damage(amount: int) -> void:
 		print("[CANNON] DEAD at ", global_position)
 		died_at.emit(global_position)
 		SoundManager.play_sfx_2d("cannon_soldier_death", global_position)
-		_spawn_death_effect()
+		if _is_on_screen():
+			_spawn_death_effect()
 		queue_free()
 
 func _on_hit_area_body_entered(body: Node2D) -> void:
@@ -258,6 +259,14 @@ func _on_hit_area_body_entered(body: Node2D) -> void:
 	if is_player_body and _contact_timer <= 0.0:
 		body.take_damage(contact_damage)
 		_contact_timer = contact_cooldown_time
+
+func _is_on_screen() -> bool:
+	var camera := get_viewport().get_camera_2d()
+	if camera == null:
+		return true
+	var half_size := get_viewport_rect().size / 2.0 / camera.zoom
+	var cam_pos := camera.get_screen_center_position()
+	return Rect2(cam_pos - half_size, half_size * 2.0).has_point(global_position)
 
 func _spawn_death_effect() -> void:
 	var particles := GPUParticles2D.new()

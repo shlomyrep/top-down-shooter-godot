@@ -32,10 +32,20 @@ var _music_duck_tween: Tween = null
 const MUSIC_VOL_DB   := -16.4
 const SFX_VOL_DB     := 0.0
 const SFX_2D_VOL_DB  := -9.3   # spatial impact/combat sounds
-const WEAPON_VOL_DB  := -13.7  # weapon shots
+const WEAPON_VOL_DB  := -17.7  # weapon shots (-0.9 dB from prev = -10% amplitude)
 const VOICE_VOL_DB   := 2.0
 const UI_VOL_DB      := -5.0
 const AMBIENT_VOL_DB := -22.0
+
+# Per-sound volume offsets (dB), applied on top of the pool's base volume.
+# Negative = quieter, positive = louder. Affects play_sfx, play_sfx_2d, play_weapon.
+const _SFX_VOLUME_OVERRIDES: Dictionary = {
+	"footstep_walk":    -14.0,  # -80% amplitude
+	"footstep_run":     -14.0,  # -80% amplitude
+	"enemy_melee_swing": -4.4,  # -40% amplitude
+	"player_hurt":       -4.4,  # -40% amplitude
+	"enemy_hit":         -6.0,  # -50% amplitude
+}
 
 # ─── Voice queue ─────────────────────────────────────────────────────────────
 var _voice_player: AudioStreamPlayer
@@ -254,34 +264,43 @@ func play_music(track_name: String, fade_sec: float = 1.5) -> void:
 	incoming.play()
 	_tween_vol_player(incoming, -80.0, MUSIC_VOL_DB, fade_sec)
 
-## Play a non-spatial SFX (build actions, UI feedback, etc.)
-func play_sfx(sound_name: String) -> void:
+## Play a non-spatial SFX (build actions, UI feedback, etc.).
+## vol_db: optional per-call dB offset added on top of the base volume and any
+## per-sound override from _SFX_VOLUME_OVERRIDES.
+func play_sfx(sound_name: String, vol_db: float = 0.0) -> void:
 	var stream := _load_sfx(sound_name)
 	if not stream:
 		return
 	var p := _next_sfx()
+	p.volume_db    = SFX_2D_VOL_DB + _SFX_VOLUME_OVERRIDES.get(sound_name, 0.0) + vol_db
 	p.global_position = Vector2.ZERO
 	p.max_distance = 999999.0   # effectively global — no attenuation
 	p.stream = stream
 	p.play()
 
 ## Play a spatially-positioned in-world SFX.
-func play_sfx_2d(sound_name: String, world_pos: Vector2) -> void:
+## vol_db: optional per-call dB offset added on top of the base volume and any
+## per-sound override from _SFX_VOLUME_OVERRIDES.
+func play_sfx_2d(sound_name: String, world_pos: Vector2, vol_db: float = 0.0) -> void:
 	var stream := _load_sfx(sound_name)
 	if not stream:
 		return
 	var p := _next_sfx()
+	p.volume_db    = SFX_2D_VOL_DB + _SFX_VOLUME_OVERRIDES.get(sound_name, 0.0) + vol_db
 	p.global_position = world_pos
 	p.max_distance = 1600.0
 	p.stream = stream
 	p.play()
 
 ## Play a weapon shot sound from the weapon pool at a world position.
-func play_weapon(sound_name: String, world_pos: Vector2) -> void:
+## vol_db: optional per-call dB offset added on top of the base volume and any
+## per-sound override from _SFX_VOLUME_OVERRIDES.
+func play_weapon(sound_name: String, world_pos: Vector2, vol_db: float = 0.0) -> void:
 	var stream := _load_sfx(sound_name)
 	if not stream:
 		return
 	var p := _next_weapon()
+	p.volume_db    = WEAPON_VOL_DB + _SFX_VOLUME_OVERRIDES.get(sound_name, 0.0) + vol_db
 	p.global_position = world_pos
 	p.stream = stream
 	p.play()

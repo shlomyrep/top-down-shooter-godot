@@ -54,11 +54,23 @@ const BARREL_TURN_SPEED    := 7.0
 
 var _cannonball_scene: PackedScene = preload("res://scenes/cannonball.tscn")
 
+var _move_audio: AudioStreamPlayer2D
+var _move_audio_playing := false
+
 func _ready() -> void:
 	health = max_health
 	health_bar.max_value = max_health
 	health_bar.value = health
 	health_bar.visible = false
+	# Looping movement engine sound — child node stays at tank's position automatically.
+	_move_audio = AudioStreamPlayer2D.new()
+	_move_audio.bus = "SFX2D"
+	_move_audio.volume_db = -12.0
+	add_child(_move_audio)
+	var stream := load("res://assets/audio/sfx/tank_move.ogg") as AudioStreamOggVorbis
+	if stream:
+		stream.loop = true
+		_move_audio.stream = stream
 	call_deferred("_refresh_path_and_state")
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -141,6 +153,7 @@ func _physics_process(delta: float) -> void:
 
 		# ── Blocked: stand ground, hull lazily faces the threat ───────────────
 		State.HOLD_AND_FIRE:
+			_set_move_sound(false)
 			velocity = Vector2.ZERO
 			DepenetrationHelper.resolve(self, delta)
 			move_and_slide()
@@ -155,6 +168,7 @@ func _physics_process(delta: float) -> void:
 
 		# ── Path open but structures remain: advance while shooting ──────────
 		State.ADVANCE:
+			_set_move_sound(true)
 			var dest       := _next_waypoint()
 			var travel_dir := (dest - global_position).normalized()
 			velocity = travel_dir * move_speed
@@ -169,6 +183,7 @@ func _physics_process(delta: float) -> void:
 
 		# ── Clear field: charge the player at full speed ──────────────────────
 		State.RAM:
+			_set_move_sound(true)
 			var ram_target := _nearest_target()
 			if not ram_target or not is_instance_valid(ram_target):
 				return
@@ -185,6 +200,15 @@ func _physics_process(delta: float) -> void:
 			if _attack_timer <= 0.0:
 				_fire_cannonball(ram_target.global_position)
 				_attack_timer = attack_cooldown_time
+
+func _set_move_sound(moving: bool) -> void:
+	if moving == _move_audio_playing:
+		return
+	_move_audio_playing = moving
+	if moving:
+		_move_audio.play()
+	else:
+		_move_audio.stop()
 
 ## Rotate the barrel toward the best target and fire.
 ## The barrel's rotation is in world-space (parent CharacterBody2D never rotates)
@@ -269,22 +293,32 @@ func take_damage(amount: int) -> void:
 	health -= amount
 	health_bar.value   = health
 	health_bar.visible = true
-	SoundManager.play_sfx_2d("enemy_hit", global_position)
+	SoundManager.play_sfx_2d("tank_hit", global_position)
 	body_sprite.modulate   = Color(10, 10, 10, 1)
 	barrel_sprite.modulate = Color(10, 10, 10, 1)
 	create_tween().tween_property(body_sprite,   "modulate", Color.WHITE, 0.15)
 	create_tween().tween_property(barrel_sprite, "modulate", Color.WHITE, 0.15)
 	if health <= 0:
 		_is_dead = true
+		_set_move_sound(false)
 		died_at.emit(global_position)
 		SoundManager.play_sfx_2d("tank_death", global_position)
-		_spawn_death_effect()
+		if _is_on_screen():
+			_spawn_death_effect()
 		queue_free()
 
 func _on_hit_area_body_entered(body: Node2D) -> void:
 	if player != null and body == player and _contact_timer <= 0.0:
 		body.take_damage(contact_damage)
 		_contact_timer = contact_cooldown_time
+
+func _is_on_screen() -> bool:
+	var camera := get_viewport().get_camera_2d()
+	if camera == null:
+		return true
+	var half_size := get_viewport_rect().size / 2.0 / camera.zoom
+	var cam_pos := camera.get_screen_center_position()
+	return Rect2(cam_pos - half_size, half_size * 2.0).has_point(global_position)
 
 func _spawn_death_effect() -> void:
 	var particles := GPUParticles2D.new()

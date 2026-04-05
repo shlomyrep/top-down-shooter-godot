@@ -6,8 +6,8 @@ extends CharacterBody2D
 @export var speed := 100.0
 @export var max_health := 90
 @export var explode_radius := 110.0
-@export var explode_damage := 45
-@export var explode_distance := 52.0
+@export var explode_damage := 36
+@export var explode_distance := 38.0
 
 var health: int
 var player: Node2D = null
@@ -173,10 +173,19 @@ func _explode() -> void:
 	for member in tree.get_nodes_in_group("squad_members"):
 		if is_instance_valid(member) and global_position.distance_to(member.global_position) <= explode_radius:
 			member.queue_free()
-	_spawn_explosion_effect()
+	if _is_on_screen():
+		_spawn_explosion_effect()
 	SoundManager.play_sfx_2d("bug_death", global_position)
 	died_at.emit(global_position)
 	queue_free()
+
+func _is_on_screen() -> bool:
+	var camera := get_viewport().get_camera_2d()
+	if camera == null:
+		return true
+	var half_size := get_viewport_rect().size / 2.0 / camera.zoom
+	var cam_pos := camera.get_screen_center_position()
+	return Rect2(cam_pos - half_size, half_size * 2.0).has_point(global_position)
 
 func _spawn_explosion_effect() -> void:
 	var particles := GPUParticles2D.new()

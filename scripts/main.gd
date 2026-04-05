@@ -187,8 +187,8 @@ func _ready() -> void:
 	hud.shield_squad_pressed.connect(_on_shield_squad_pressed)
 	SupportManager.cooldowns_updated.connect(_on_support_cooldowns_updated)
 
-	# Tutorial overlay — solo only, max 3 plays
-	if not GameData.is_multiplayer and GameData.tutorial_plays < 3:
+	# Tutorial overlay — solo only, enabled, max 3 plays
+	if not GameData.is_multiplayer and GameData.tutorial_enabled and GameData.tutorial_plays < 3:
 		_tutorial_overlay = load("res://scripts/tutorial_overlay.gd").new()
 		$UILayer.add_child(_tutorial_overlay)
 		_tutorial_overlay.setup(hud)
@@ -209,6 +209,7 @@ func _place_buy_stations() -> void:
 	station.player_entered.connect(_on_buy_station_entered)
 	station.player_exited.connect(_on_buy_station_exited)
 	add_child(station)
+	move_child(station, $Player.get_index())
 	# Reserve the shop cell so nothing can be built on it
 	BuildManager.reserve_cell(shop_cell)
 
@@ -219,6 +220,7 @@ func _place_buy_stations() -> void:
 	rec_station.player_entered.connect(_on_recovery_station_entered)
 	rec_station.player_exited.connect(_on_recovery_station_exited)
 	add_child(rec_station)
+	move_child(rec_station, $Player.get_index())
 	BuildManager.reserve_cell(rec_cell)
 
 func _on_buy_station_entered(station: Node) -> void:
@@ -1048,6 +1050,26 @@ func _spawn_squad(count: int, shielded: bool) -> void:
 			"x": player.global_position.x, "y": player.global_position.y,
 			"count": count, "shielded": shielded
 		})
+
+## Push a squad member off a cell so a structure can be placed on it.
+## Tries 8 directions (cardinal + diagonal); picks the first unoccupied cell
+## that isn't the player's cell. Falls back to a raw offset if all are taken.
+func _push_squad_member_off_cell(member: Node2D, blocked_cell: Vector2i) -> void:
+	var offsets: Array[Vector2i] = [
+		Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1),
+		Vector2i(1, 1), Vector2i(-1, 1), Vector2i(1, -1), Vector2i(-1, -1),
+	]
+	var player_cell := BuildManager.world_to_cell(player.global_position)
+	for off in offsets:
+		var candidate: Vector2i = blocked_cell + off
+		if candidate == player_cell:
+			continue
+		if BuildManager.is_occupied(candidate) or BuildManager.is_reserved(candidate):
+			continue
+		member.global_position = BuildManager.cell_to_world(candidate)
+		return
+	# All neighbours blocked — just nudge away from the wall centre
+	member.global_position = BuildManager.cell_to_world(blocked_cell) + Vector2(80, 80)
 
 func _on_support_cooldowns_updated() -> void:
 	hud.update_support_cooldowns(

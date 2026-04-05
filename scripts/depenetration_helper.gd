@@ -1,7 +1,9 @@
 class_name DepenetrationHelper
 
-## Layer 6 bitmask (walls + doors).  Nothing else should be 32.
+## Layer 6 bitmask (walls + structures).  Nothing else should be 32.
 const WALL_MASK  := 32
+## Layer 8 bitmask (doors).
+const DOOR_MASK  := 128
 ## Speed (px/s) added to push a character clear of an overlapping wall/door.
 const PUSH_SPEED := 200.0
 
@@ -9,6 +11,10 @@ const PUSH_SPEED := 200.0
 ## Detects overlap with any wall or door and blends a push component into
 ## body.velocity so the character visibly slides out instead of staying stuck.
 static func resolve(body: CharacterBody2D, _delta: float) -> void:
+	# Use both wall and door layers — respects disabled shapes (open doors pass through)
+	_resolve_mask(body, WALL_MASK | DOOR_MASK)
+
+static func _resolve_mask(body: CharacterBody2D, mask: int) -> void:
 	var space := body.get_world_2d().direct_space_state
 	if not space:
 		return
@@ -26,7 +32,7 @@ static func resolve(body: CharacterBody2D, _delta: float) -> void:
 	var params := PhysicsShapeQueryParameters2D.new()
 	params.shape     = shape
 	params.transform = body.global_transform * body.shape_owner_get_transform(owner_id)
-	params.collision_mask     = WALL_MASK
+	params.collision_mask     = mask
 	params.exclude            = [body.get_rid()]
 	params.collide_with_bodies = true
 	params.collide_with_areas  = false

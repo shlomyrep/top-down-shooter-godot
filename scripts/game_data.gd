@@ -6,6 +6,7 @@ var record_wave: int = 0
 var player_name: String = "SURVIVOR"
 var _last_wave_reached: int = 0
 var tutorial_plays: int = 0
+var tutorial_enabled: bool = true
 
 ## Voice language code. Supported: "en", "he". Defaults to "en".
 var voice_language: String = "en"
@@ -150,7 +151,7 @@ func force_save() -> void:
 	_save()
 
 func _save() -> void:
-	var data := {"record_wave": record_wave, "player_name": player_name, "tutorial_plays": tutorial_plays, "voice_language": voice_language, "saved_friends": saved_friends}
+	var data := {"record_wave": record_wave, "player_name": player_name, "tutorial_plays": tutorial_plays, "tutorial_enabled": tutorial_enabled, "voice_language": voice_language, "saved_friends": saved_friends}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file:
 		file.store_string(JSON.stringify(data))
@@ -168,6 +169,7 @@ func _load() -> void:
 		record_wave = int(parsed.get("record_wave", 0))
 		player_name = str(parsed.get("player_name", "SURVIVOR"))
 		tutorial_plays = int(parsed.get("tutorial_plays", 0))
+		tutorial_enabled = bool(parsed.get("tutorial_enabled", true))
 		voice_language = str(parsed.get("voice_language", "en"))
 		var raw_friends = parsed.get("saved_friends", [])
 		if raw_friends is Array:

@@ -6,17 +6,20 @@
 ## Then call setup(hud) and start() if the conditions are met.
 extends Control
 
-const MAX_PLAYS        := 3
-const SQUAD_DELAY_SECS := 15.0
-const FINGER_W         := 72.0
-const FINGER_H         := 90.0
+const MAX_PLAYS         := 3
+const SQUAD_DELAY_SECS  := 20.0   # seconds into wave 1 before squad hint
+const AUTO_ADVANCE_SECS := 3.5    # joystick hint auto-advance delay
+const FINGER_W          := 72.0
+const FINGER_H          := 90.0
 
 ## Step index constants — readable names used in match statements.
-const STEP_CAMP   := 0   # wave-1 build: highlight CAMP / template button
-const STEP_BUILD  := 1   # wave-1 build: highlight floating BUILD / place button
-const STEP_DOORS  := 2   # wave-1 build: highlight door-toggle button
-const STEP_SQUAD  := 4   # wave-2 combat: highlight SQUAD button
-const STEP_DONE   := 99  # waiting state between wave-1 and wave-2
+const STEP_MOVE  := -2   # wave-1 combat start: move joystick hint (auto-advance)
+const STEP_AIM   := -1   # wave-1 combat start: aim joystick hint (auto-advance)
+const STEP_CAMP  := 0    # wave-1 build: highlight CAMP / template button
+const STEP_BUILD := 1    # wave-1 build: highlight floating BUILD / place button
+const STEP_DOORS := 2    # wave-1 build: highlight door-toggle button
+const STEP_SQUAD := 4    # wave-1 combat: highlight SQUAD button (20s after wave starts)
+const STEP_DONE  := 99   # waiting state
 
 ## Emitted so main.gd can pause/resume the build-phase countdown timer.
 signal request_pause_build
@@ -24,13 +27,17 @@ signal request_resume_build
 
 var _hud: Control
 var _active: bool = false
-var _step: int = -1
+var _step: int = -99
 var _target_node: Control = null
 
+var _dim_rect: ColorRect
 var _finger: TextureRect
 var _panel: PanelContainer
 var _msg_label: Label
+var _sub_label: Label
 var _squad_delay: Timer
+var _auto_advance_timer: Timer
+var _squad_retry_timer: Timer
 
 
 func _ready() -> void:
@@ -39,6 +46,14 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	z_index = 200
 	visible = true
+
+	# Dim overlay — full-screen darkening behind the pointer
+	_dim_rect = ColorRect.new()
+	_dim_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_dim_rect.color = Color(0.0, 0.0, 0.0, 0.45)
+	_dim_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_dim_rect.visible = false
+	add_child(_dim_rect)
 
 	# Finger sprite — points upward, so we place it BELOW the target button
 	_finger = TextureRect.new()
@@ -71,6 +86,11 @@ func _ready() -> void:
 	_panel.add_theme_stylebox_override("panel", style)
 	add_child(_panel)
 
+	var _inner: VBoxContainer = VBoxContainer.new()
+	_inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_inner.add_theme_constant_override("separation", 6)
+	_panel.add_child(_inner)
+
 	_msg_label = Label.new()
 	_msg_label.add_theme_color_override("font_color", Color(1.0, 0.93, 0.40, 1.0))
 	_msg_label.add_theme_font_size_override("font_size", 20)
@@ -78,14 +98,38 @@ func _ready() -> void:
 	_msg_label.autowrap_mode          = TextServer.AUTOWRAP_WORD
 	_msg_label.custom_minimum_size    = Vector2(210, 0)
 	_msg_label.mouse_filter           = Control.MOUSE_FILTER_IGNORE
-	_panel.add_child(_msg_label)
+	_inner.add_child(_msg_label)
 
-	# 15-second delay before showing the squad hint mid-wave
+	_sub_label = Label.new()
+	_sub_label.add_theme_color_override("font_color", Color(0.72, 0.72, 0.72, 0.85))
+	_sub_label.add_theme_font_size_override("font_size", 14)
+	_sub_label.horizontal_alignment  = HORIZONTAL_ALIGNMENT_CENTER
+	_sub_label.autowrap_mode          = TextServer.AUTOWRAP_WORD
+	_sub_label.custom_minimum_size    = Vector2(210, 0)
+	_sub_label.mouse_filter           = Control.MOUSE_FILTER_IGNORE
+	_sub_label.text = "Tap the highlighted\nbutton to continue"
+	_inner.add_child(_sub_label)
+
+	# Squad hint delay — fires 20s into wave 1
 	_squad_delay = Timer.new()
 	_squad_delay.one_shot  = true
 	_squad_delay.wait_time = SQUAD_DELAY_SECS
 	_squad_delay.timeout.connect(_on_squad_delay)
 	add_child(_squad_delay)
+
+	# Auto-advance timer for joystick intro steps
+	_auto_advance_timer = Timer.new()
+	_auto_advance_timer.one_shot  = true
+	_auto_advance_timer.wait_time = AUTO_ADVANCE_SECS
+	_auto_advance_timer.timeout.connect(_on_auto_advance)
+	add_child(_auto_advance_timer)
+
+	# Retry timer — shows squad hint 5s later if it didn't fire cleanly
+	_squad_retry_timer = Timer.new()
+	_squad_retry_timer.one_shot  = true
+	_squad_retry_timer.wait_time = 5.0
+	_squad_retry_timer.timeout.connect(_on_squad_retry)
+	add_child(_squad_retry_timer)
 
 
 ## Called from main.gd once — wires up all HUD and BuildManager signals.
@@ -113,6 +157,7 @@ func notify_build_phase_entered(wave_num: int) -> void:
 	if not _active:
 		return
 	if wave_num == 1:
+		_squad_delay.stop()  # prevent squad hint firing in build phase
 		_show_step(STEP_CAMP)
 
 
@@ -120,16 +165,30 @@ func notify_build_phase_entered(wave_num: int) -> void:
 func notify_wave_started(wave_num: int) -> void:
 	if not _active:
 		return
-	if wave_num == 2:
-		_squad_delay.start()
+	if wave_num == 2:		_show_step(STEP_MOVE)		_squad_delay.start()
 
 
 # ── Internal step machine ────────────────────────────────────────────────────
 
 func _show_step(idx: int) -> void:
 	_step = idx
+	_auto_advance_timer.stop()
+	_sub_label.visible = true
+	_sub_label.text = "Tap the highlighted\nbutton to continue"
 
 	match idx:
+		STEP_MOVE:
+			_target_node = _hud.get_node_or_null("MoveJoystick")
+			_msg_label.text = "Use this joystick\nto MOVE"
+			_sub_label.visible = false
+			_auto_advance_timer.start()
+
+		STEP_AIM:
+			_target_node = _hud.get_node_or_null("AimJoystick")
+			_msg_label.text = "Use this joystick\nto AIM & SHOOT"
+			_sub_label.visible = false
+			_auto_advance_timer.start()
+
 		STEP_CAMP:
 			_target_node = _hud.get_node_or_null("BuildPanel/VBox/Palette/TemplateBtn")
 			_msg_label.text = tr("TUTORIAL_0")
@@ -139,9 +198,9 @@ func _show_step(idx: int) -> void:
 			_msg_label.text = tr("TUTORIAL_1")
 
 		STEP_DOORS:
-			# Only show if the player actually has doors placed
 			if get_tree().get_nodes_in_group("doors").is_empty():
 				_hide()
+				_step = STEP_DONE
 				return
 			_target_node = _hud.get_node_or_null("DoorToggleBtn")
 			_msg_label.text = tr("TUTORIAL_2")
@@ -149,15 +208,21 @@ func _show_step(idx: int) -> void:
 		STEP_SQUAD:
 			_target_node = _hud.get_node_or_null("SupportPanel/VBox/SquadBtn")
 			_msg_label.text = tr("TUTORIAL_4")
+			_sub_label.text = "Tap the Squad button\nto continue"
 
 		_:
 			_finish()
 			return
 
 	if _target_node == null:
-		# The target button wasn't found — skip this step silently
-		_step += 1
-		_show_step(_step)
+		# Target button not found — skip this step
+		match idx:
+			STEP_MOVE: _show_step(STEP_AIM)
+			STEP_AIM:  _step = STEP_DONE
+			STEP_CAMP: _show_step(STEP_BUILD)
+			STEP_BUILD: _show_step(STEP_DOORS)
+			STEP_DOORS: _step = STEP_DONE
+			_: _finish()
 		return
 
 	_set_pointer_visible(true)
@@ -204,6 +269,7 @@ func _process(_delta: float) -> void:
 
 
 func _set_pointer_visible(on: bool) -> void:
+	_dim_rect.visible = on
 	_finger.visible = on
 	_panel.visible = on
 	if on:
@@ -218,9 +284,11 @@ func _hide() -> void:
 
 func _finish() -> void:
 	_active = false
-	_step   = -1
+	_step   = -99
 	_hide()
 	_squad_delay.stop()
+	_auto_advance_timer.stop()
+	_squad_retry_timer.stop()
 
 
 # ── HUD / BuildManager signal handlers ──────────────────────────────────────
@@ -265,8 +333,22 @@ func _on_build_mode_ended() -> void:
 		_step = STEP_DONE
 
 
+func _on_auto_advance() -> void:
+	if not _active:
+		return
+	_hide()
+	match _step:
+		STEP_MOVE: _show_step(STEP_AIM)
+		STEP_AIM:  _step = STEP_DONE  # wait for build phase
+
+
 func _on_squad_delay() -> void:
 	if not _active:
 		return
-	# 15 seconds into wave 2 — show squad hint
+	_show_step(STEP_SQUAD)
+
+
+func _on_squad_retry() -> void:
+	if not _active:
+		return
 	_show_step(STEP_SQUAD)
